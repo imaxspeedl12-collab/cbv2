@@ -2110,19 +2110,19 @@ applyHubColor(savedHubColor)
 applyTextAndBorderColor(savedTextAndBorderColor)
 
 -- Thêm Label cập nhật thông tin
-if game.CoreGui:FindFirstChild("TestHubLabelV2") then
-    game.CoreGui.TestHubLabelV2:Destroy()
+if game.CoreGui:FindFirstChild("CHANBAOHUBLabelV2") then
+    game.CoreGui.CHANBAOHUBLabelV2:Destroy()
 end
 
-local TestHubLabel = Instance.new("ScreenGui")
-TestHubLabel.Name = "TestHubLabelV2"
+local CHANBAOHUBLabel = Instance.new("ScreenGui")
+CHANBAOHUBLabel.Name = "CHANBAOHUBLabelV2"
 local Label = Instance.new("TextLabel")
 
 -- Đảm bảo GUI được hiển thị trên màn hình
-TestHubLabel.Parent = game.CoreGui
+CHANBAOHUBLabel.Parent = game.CoreGui
 
 -- Cài đặt thuộc tính cho Label
-Label.Parent = TestHubLabel
+Label.Parent = CHANBAOHUBLabel
 Label.Size = UDim2.new(0, 200, 0, 30)
 Label.Position = UDim2.new(0, 190, 0, -57)
 Label.BackgroundTransparency = 1
@@ -2312,7 +2312,7 @@ local fields = {
             ["color"] = tonumber(0xff0000),
             ["fields"] = fields,
             ["footer"] = {
-                ["text"] = "TestHub | Thông báo tự động",
+                ["text"] = "CHANBAOHUB | Thông báo tự động",
                 ["icon_url"] = "https://i.imgur.com/gtePhRZ.jpeg"
             },
             ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%S.000Z", os.time())
