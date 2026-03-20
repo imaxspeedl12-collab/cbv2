@@ -366,7 +366,7 @@ local Section = sTab:AddSection({Name = serverName})
          end
 local function getBossRoot()
     local workspace = game:GetService("Workspace")
-    local bossFolders = {workspace.SeaMonster, workspace.GhostMonster}
+    local bossFolders = {workspace.SeaMonsters, workspace.EventSpawns}
     local bosses = {"SeaKing", "HydraSeaKing", "Ghost Ship"}
 
     for _, folder in ipairs(bossFolders) do
@@ -506,9 +506,9 @@ sTab:AddToggle({
                     local player = game.Players.LocalPlayer
                     local workspaceIsland = game:GetService("Workspace").Island
                     local workspace = game:GetService("Workspace")
-                    local seaKing = workspace.SeaMonster:FindFirstChild("SeaKing")
-                    local hydra = workspace.SeaMonster:FindFirstChild("HydraSeaKing")
-                    local gs = workspace.GhostMonster:FindFirstChild("Ghost Ship")
+                    local seaKing = workspace.SeaMonsters:FindFirstChild("SeaKing")
+                    local hydra = workspace.SeaMonsters:FindFirstChild("HydraSeaKing")
+                    local gs = workspace.EventSpawns:FindFirstChild("Ghost Ship")
 
                     local skHealth = seaKing and seaKing:FindFirstChild("Humanoid") and seaKing.Humanoid.Health or 0
                     local hydraHealth = hydra and hydra:FindFirstChild("Humanoid") and hydra.Humanoid.Health or 0
@@ -848,9 +848,9 @@ end
                                     hasGhostShipChest = true
                                 end
 
-                                local seaKingCheck = Workspace.SeaMonster:FindFirstChild("SeaKing")
-                                local hydraCheck = Workspace.SeaMonster:FindFirstChild("HydraSeaKing")
-                                local gsCheck = Workspace.GhostMonster:FindFirstChild("Ghost Ship")
+                                local seaKingCheck = Workspace.SeaMonsters:FindFirstChild("SeaKing")
+                                local hydraCheck = Workspace.SeaMonsters:FindFirstChild("HydraSeaKing")
+                                local gsCheck = Workspace.EventSpawns:FindFirstChild("Ghost Ship")
 
                                 -- Thoát sớm nếu không còn rương hoặc boss (đảo chìm)
                                 if not hasSeaKing and not hasSeaKingChest and not hasHydraStand and not hasHydraChest and not hasGhostShipChest and not seaKingCheck and not hydraCheck and (not gsCheck or not gsCheck:FindFirstChild("HumanoidRootPart")) then
