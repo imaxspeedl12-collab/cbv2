@@ -298,11 +298,11 @@ loadSavedData()
 local function getServerUptime(servers, currentJobId)
     for _, server in pairs(servers) do
         if type(server) == "table" and server.JobId == currentJobId and server.ServerOsTime then
-            local uptime = os.time() - server.ServerOsTime -- Tính thời gian server đã hoạt động
+            local uptime = os.time() - server.ServerOsTime
             return uptime, server.ServerName, server.JobId
         end
     end
-    return nil, nil, nil -- Không tìm thấy server hiện tại
+    return nil, nil, nil
 end
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -322,7 +322,17 @@ local servers = ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):W
 local currentJobId = game.JobId
 
 -- Gọi hàm để lấy thời gian hoạt động của server hiện tại
-local uptime, serverName, jobId = getServerUptime(servers, currentJobId)
+local currentServer = nil
+for _, s in ipairs(servers) do
+    if s.JobId == currentJobId then
+        currentServer = s
+        break
+    end
+end
+
+local uptime = currentServer and (os.time() - currentServer.CreatedAt) or 0
+local serverName = currentServer and currentServer.Name or "Không xác định"
+local jobId = currentJobId
 
 local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/NamG2657/Scripting/refs/heads/main/OrionLib.lua?t=" .. os.time(), true))()
 
