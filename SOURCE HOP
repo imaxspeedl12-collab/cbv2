@@ -1012,17 +1012,26 @@ sTab:AddToggle({
     Callback = function(state)
         Settings.eff = state
         SaveSettings() 
-if state then
-                   
-            for _, v in pairs(game.ReplicatedStorage.Chest:GetChildren()) do
-                if v.Name == "FruitEffect" or v.Name == "SwordEffect" then
-                    v:Destroy()
+        if state then
+            pcall(function()
+                local chest = game.ReplicatedStorage:FindFirstChild("Chest")
+                if chest then
+                    -- Xóa FruitEffect (ở Chest)
+                    local fruitEffect = chest:FindFirstChild("FruitEffect")
+                    if fruitEffect then fruitEffect:Destroy() end
+                    
+                    -- Xóa SwordEffect (ở Chest.Remotes.Events)
+                    local events = chest:FindFirstChild("Remotes") and chest.Remotes:FindFirstChild("Events")
+                    if events then
+                        local swordEffect = events:FindFirstChild("SwordEffect")
+                        if swordEffect then swordEffect:Destroy() end
+                    end
                 end
-            end
+                print("✅ Đã xóa effect!")
+            end)
         end
     end
 })
-
 
 
 
