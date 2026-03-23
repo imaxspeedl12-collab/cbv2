@@ -638,15 +638,31 @@ local function findValidServer()
 end
 
 -- HÀM TELEPORT MỚI
+-- 🏆 Hàm Teleport() mới
 local function Teleport()
+    print("🔄 Teleport: đang tìm server...")
     local selectedServer = findValidServer()
+    
     if selectedServer then
-        saveTeleportedServers(selectedServer.JobId)
-        th.New("Đang Tìm Server")
+        print("✅ Teleport: tìm thấy server:", selectedServer.JobId)
+        print("   PlaceId:", selectedServer.PlaceId)
+        print("   Số người:", selectedServer.PlayerCount)
+        
+        -- Lưu server đã tele (nếu cần)
+        if saveTeleportedServers then
+            saveTeleportedServers(selectedServer.JobId)
+        end
+        
+        th.New("Đang hop sang server có boss", 2)
         TeleportService:TeleportToPlaceInstance(selectedServer.PlaceId, selectedServer.JobId, game.Players.LocalPlayer)
+        return true
     else
-        removeOldestServer()
-        th.New("Đang Tìm Server Nâng Cao",5)
+        print("❌ Teleport: không tìm thấy server phù hợp")
+        if removeOldestServer then
+            removeOldestServer()
+        end
+        th.New("Không tìm thấy server có boss", 3)
+        return false
     end
 end
 
