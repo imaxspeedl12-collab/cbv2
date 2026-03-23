@@ -671,6 +671,18 @@ sTab:AddToggle({
         end
     end
 })
+sTab:AddSlider({
+    Name = "Thời gian Chờ GS+HD+SK (giây)",
+    Min = 0,
+    Max = 300,
+    Default = Settings.HopThreshold,
+    Increment = 5,
+    ValueName = "giây",
+    Callback = function(value)
+        Settings.HopThreshold = value
+        SaveSettings()
+    end
+})
 
 local player = game:GetService("Players").LocalPlayer
 local replicatedStorage = game:GetService("ReplicatedStorage")
@@ -1666,3 +1678,4 @@ httprequest({
 })
 
 OrionLib:Init()
+mày check coi sao dcm chưa nhặt ruong nó đã hop
