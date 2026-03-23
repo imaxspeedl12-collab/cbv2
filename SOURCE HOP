@@ -600,25 +600,47 @@ local function removeOldestServer()
 end
 
 local function getServerUptime(server)
-    return os.time() - server.ServerOsTime
+    return os.time() - server.CreatedAt
 end
 
 local function findValidServer()
-    local servers = ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer()
-    if type(servers) ~= "table" or not next(servers) then return nil end
-
+    -- Lấy tất cả server từ nhiều page
+    local allServers = {}
+    local page = 1
+    
+    while true do
+        local success, servers = pcall(function()
+            return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer({ page = page })
+        end)
+        
+        if not success or not servers or #servers == 0 then
+            break
+        end
+        
+        for _, s in ipairs(servers) do
+            table.insert(allServers, s)
+        end
+        
+        page = page + 1
+        task.wait(0.05)
+        if page > 120 then break end -- giới hạn an toàn
+    end
+    
+    if #allServers == 0 then return nil end
+    
+    -- Lọc server theo 12 khung giờ
     local validServers = { group1 = {}, group2 = {}, group3 = {}, group4 = {}, group5 = {} ,group6 = {}, group7 = {}, group8 = {},group9 = {}, group10 = {} , group11 = {}, group12 = {}}
     local currentJobId, currentPlaceId = game.JobId, game.PlaceId
 
-    for _, server in pairs(servers) do
+    for _, server in pairs(allServers) do
         if type(server) == "table" and server.CreatedAt and server.JobId and server.PlayerCount and server.PlaceId then
-            local uptime = os.time() - server.CreatedAt  -- ĐÃ SỬA
+            local uptime = os.time() - server.CreatedAt
             local jobId = server.JobId
-            local players = server.PlayerCount  -- ĐÃ SỬA
+            local players = server.PlayerCount
 
             if server.PlaceId == currentPlaceId and jobId ~= currentJobId and not visitedServers[jobId] and players > 0 and players < 13 then
                 if uptime >= 4 * 60 * 60 + 21 * 60 and uptime <= 4 * 60 * 60 + 30 * 60 then
-                    table.insert(validServers.group1, server) 
+                    table.insert(validServers.group1, server)
                 elseif uptime >= 8 * 60 * 60 + 52 * 60 and uptime <= 9 * 60 * 60 + 1 * 60 then
                     table.insert(validServers.group2, server)
                 elseif uptime >= 59 * 60 + 1 and uptime <= 1 * 60 * 60 + 7 * 60 then
@@ -653,6 +675,7 @@ local function findValidServer()
             return validServers[group][math.random(#validServers[group])]
         end
     end
+
     return nil
 end
 -- 🏆 Hàm Teleport() mới
