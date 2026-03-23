@@ -563,78 +563,90 @@ local function getServerUptime(server)
 end
 
 -- HÀM FINDVALIDSERVER (QUÉT PAGE + LỌC 12 KHUNG GIỜ)
-local function findValidServer()
+-- Cache server
+local cachedBossServers = nil
+
+local function refreshCache()
+    print("🔄 Đang quét server...")
     local allServers = {}
     local page = 1
+    local rs = game:GetService("ReplicatedStorage")
+    local getServers = rs:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists")
     
     while true do
         local success, servers = pcall(function()
-            return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer({ page = page })
+            return getServers:InvokeServer({ page = page })
         end)
-        
-        if not success or not servers or #servers == 0 then
-            break
-        end
-        
+        if not success or not servers or #servers == 0 then break end
         for _, s in ipairs(servers) do
             table.insert(allServers, s)
         end
-        
         page = page + 1
         task.wait(0.05)
         if page > 120 then break end
     end
     
-    if #allServers == 0 then return nil end
+    local bossServers = {}
+    local currentPlaceId = game.PlaceId
     
-    local validServers = { group1 = {}, group2 = {}, group3 = {}, group4 = {}, group5 = {} ,group6 = {}, group7 = {}, group8 = {},group9 = {}, group10 = {} , group11 = {}, group12 = {}}
-    local currentJobId, currentPlaceId = game.JobId, game.PlaceId
-
-    for _, server in pairs(allServers) do
-        if type(server) == "table" and server.CreatedAt and server.JobId and server.PlayerCount and server.PlaceId then
-            local uptime = getServerUptime(server)
-            local jobId = server.JobId
-            local players = server.PlayerCount
-
-            if server.PlaceId == currentPlaceId and jobId ~= currentJobId and not visitedServers[jobId] and players > 0 and players < 13 then
-                if uptime >= 4 * 60 * 60 + 21 * 60 and uptime <= 4 * 60 * 60 + 30 * 60 then
-                    table.insert(validServers.group1, server)
-                elseif uptime >= 8 * 60 * 60 + 52 * 60 and uptime <= 9 * 60 * 60 + 1 * 60 then
-                    table.insert(validServers.group2, server)
-                elseif uptime >= 59 * 60 + 1 and uptime <= 1 * 60 * 60 + 7 * 60 then
-                    table.insert(validServers.group3, server)
-                elseif uptime >= 2 * 60 * 60 + 7 * 60 and uptime <= 2 * 60 * 60 + 14 * 60 then
-                    table.insert(validServers.group4, server)
-                elseif uptime >= 3 * 60 * 60 + 14 * 60 and uptime <= 3 * 60 * 60 + 21 * 60 then
-                    table.insert(validServers.group5, server)
-                elseif uptime >= 5 * 60 * 60 + 31 * 60 and uptime <= 5 * 60 * 60 + 37 * 60 then
-                    table.insert(validServers.group6, server)
-                elseif uptime >= 13 * 60 * 60 + 28 * 60 and uptime <= 13 * 60 * 60 + 35 * 60 then
-                    table.insert(validServers.group7, server)
-                elseif uptime >= 18 * 60 * 60 + 10 * 60 and uptime <= 18 * 60 * 60 + 17 * 60 then
-                    table.insert(validServers.group8, server)
-                elseif uptime >= 7 * 60 * 60 + 45 * 60 and uptime <= 7 * 60 * 60 + 52 * 60 then
-                    table.insert(validServers.group9, server)
-                elseif uptime >= 6 * 60 * 60 + 38 * 60 and uptime <= 6 * 60 * 60 + 45 * 60 then
-                    table.insert(validServers.group10, server)
-                elseif uptime >= 10 * 60 * 60 + 3 * 60 and uptime <= 10 * 60 * 60 + 9 * 60 then
-                    table.insert(validServers.group11, server)
-                elseif uptime >= 11 * 60 * 60 + 11 * 60 and uptime <= 11 * 60 * 60 + 17 * 60 then
-                    table.insert(validServers.group12, server)
-                end
+    for _, s in ipairs(allServers) do
+        if s.JobId and s.PlaceId == currentPlaceId and s.CreatedAt and s.PlayerCount then
+            local uptime = os.time() - s.CreatedAt
+            local h = math.floor(uptime / 3600)
+            local m = math.floor((uptime % 3600) / 60)
+            
+            if (h == 4 and m >= 21 and m <= 30) or
+               (h == 8 and m >= 52 and m <= 59) or (h == 9 and m <= 1) or
+               (h == 0 and m >= 59 and m <= 67) or
+               (h == 2 and m >= 7 and m <= 14) or
+               (h == 3 and m >= 14 and m <= 21) or
+               (h == 5 and m >= 31 and m <= 37) or
+               (h == 13 and m >= 28 and m <= 35) or
+               (h == 18 and m >= 10 and m <= 17) or
+               (h == 7 and m >= 45 and m <= 52) or
+               (h == 6 and m >= 38 and m <= 45) or
+               (h == 10 and m >= 3 and m <= 9) or
+               (h == 11 and m >= 11 and m <= 17) then
+                table.insert(bossServers, {
+                    JobId = s.JobId,
+                    PlaceId = s.PlaceId,
+                    PlayerCount = s.PlayerCount
+                })
             end
         end
     end
+    
+    cachedBossServers = bossServers
+    print("✅ Đã lưu " .. #bossServers .. " server có boss")
+end
 
-    math.randomseed(tick())
-    local priorityGroups = { "group1", "group2", "group3", "group4" ,"group5","group6","group7","group8","group9","group10","group11","group12"}
-    for _, group in ipairs(priorityGroups) do
-        if #validServers[group] > 0 then
-            return validServers[group][math.random(#validServers[group])]
+local function findValidServer()
+    if not cachedBossServers then
+        refreshCache()
+    end
+    
+    if #cachedBossServers == 0 then
+        return nil
+    end
+    
+    local currentJobId = game.JobId
+    local available = {}
+    for _, s in ipairs(cachedBossServers) do
+        if s.JobId ~= currentJobId then
+            table.insert(available, s)
         end
     end
-
-    return nil
+    
+    if #available == 0 then
+        return nil
+    end
+    
+    local selected = available[math.random(#available)]
+    return {
+        JobId = selected.JobId,
+        PlaceId = selected.PlaceId,
+        PlayerCount = selected.PlayerCount
+    }
 end
 
 -- HÀM TELEPORT MỚI
