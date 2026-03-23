@@ -707,18 +707,19 @@ sTab:AddToggle({
                 local gsSpawnTime = gsTimeLabel and ConvertTimeToSeconds(gsTimeLabel.Text) or 9999
 
                 local function spamTeleport()
-                    coroutine.wrap(function()
-                        while getgenv().SeaKinghop do
-                            local success = pcall(function()
-                                Teleport()
-                            end)
-                            if success then
-                                break
-                            end
-                            task.wait(0.2)
-                        end
-                    end)()
-                end
+    print("🔥 spamTeleport ĐƯỢC GỌI!")  -- <-- THÊM DÒNG NÀY
+    coroutine.wrap(function()
+        while getgenv().SeaKinghop do
+            local success = pcall(function()
+                Teleport()
+            end)
+            if success then
+                break
+            end
+            task.wait(0.2)
+        end
+    end)()
+end
 
                 if skSpawnTime < Settings.HopThreshold then
                     th.New("Sea King hoặc Hydra spawn sau " .. skSpawnTime .. " giây, không hop!", 1)
