@@ -562,93 +562,98 @@ local function getServerUptime(server)
     return os.time() - server.CreatedAt
 end
 
--- HÀM FINDVALIDSERVER (QUÉT PAGE + LỌC 12 KHUNG GIỜ)
--- Cache server
-local cachedBossServers = nil
-
-local function refreshCache()
-    print("🔄 Đang quét server...")
-    local allServers = {}
-    local page = 1
+local function findAndHopImmediately()
+    if _G.isScanning then
+        th.New("Đang quét, vui lòng đợi...", 2)
+        return false
+    end
+    
+    _G.isScanning = true
+    th.New("🔄 Bắt đầu quét server...", 2)
+    
     local rs = game:GetService("ReplicatedStorage")
     local getServers = rs:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists")
+    local currentJobId = game.JobId
+    local currentPlaceId = game.PlaceId
+    local page = 1
+    local allFoundServers = {} -- Lưu server tìm thấy để lưu vào file
     
     while true do
-        local success, servers = pcall(function()
-            return getServers:InvokeServer({ page = page })
-        end)
-        if not success or not servers or #servers == 0 then break end
-        for _, s in ipairs(servers) do
-            table.insert(allServers, s)
+        local batchServers = {}
+        
+        -- Quét 10 page
+        for i = 1, 10 do
+            local success, servers = pcall(function()
+                return getServers:InvokeServer({ page = page })
+            end)
+            if not success or not servers or #servers == 0 then
+                _G.isScanning = false
+                th.New("❌ Không còn server", 2)
+                return false
+            end
+            for _, s in ipairs(servers) do
+                table.insert(batchServers, s)
+            end
+            page = page + 1
+            task.wait(0.03)
+            if page > 200 then break
         end
-        page = page + 1
-        task.wait(0.05)
-        if page > 120 then break end
-    end
-    
-    local bossServers = {}
-    local currentPlaceId = game.PlaceId
-    
-    for _, s in ipairs(allServers) do
-        if s.JobId and s.PlaceId == currentPlaceId and s.CreatedAt and s.PlayerCount then
-            local uptime = os.time() - s.CreatedAt
-            local h = math.floor(uptime / 3600)
-            local m = math.floor((uptime % 3600) / 60)
-            
-            if (h == 4 and m >= 21 and m <= 30) or
-               (h == 8 and m >= 52 and m <= 59) or (h == 9 and m <= 1) or
-               (h == 0 and m >= 59 and m <= 67) or
-               (h == 2 and m >= 7 and m <= 14) or
-               (h == 3 and m >= 14 and m <= 21) or
-               (h == 5 and m >= 31 and m <= 37) or
-               (h == 13 and m >= 28 and m <= 35) or
-               (h == 18 and m >= 10 and m <= 17) or
-               (h == 7 and m >= 45 and m <= 52) or
-               (h == 6 and m >= 38 and m <= 45) or
-               (h == 10 and m >= 3 and m <= 9) or
-               (h == 11 and m >= 11 and m <= 17) then
-                table.insert(bossServers, {
-                    JobId = s.JobId,
-                    PlaceId = s.PlaceId,
-                    PlayerCount = s.PlayerCount
-                })
+        
+        -- Kiểm tra lô này có boss không
+        for _, s in ipairs(batchServers) do
+            if s.JobId and s.JobId ~= currentJobId and s.PlaceId == currentPlaceId and s.CreatedAt and s.PlayerCount then
+                local uptime = os.time() - s.CreatedAt
+                local h = math.floor(uptime / 3600)
+                local m = math.floor((uptime % 3600) / 60)
+                
+                if (h == 4 and m >= 21 and m <= 30) or
+                   (h == 8 and m >= 52 and m <= 59) or (h == 9 and m <= 1) or
+                   (h == 0 and m >= 59 and m <= 67) or
+                   (h == 2 and m >= 7 and m <= 14) or
+                   (h == 3 and m >= 14 and m <= 21) or
+                   (h == 5 and m >= 31 and m <= 37) or
+                   (h == 13 and m >= 28 and m <= 35) or
+                   (h == 18 and m >= 10 and m <= 17) or
+                   (h == 7 and m >= 45 and m <= 52) or
+                   (h == 6 and m >= 38 and m <= 45) or
+                   (h == 10 and m >= 3 and m <= 9) or
+                   (h == 11 and m >= 11 and m <= 17) then
+                    
+                    -- LƯU SERVER ĐÃ HOP (giữ chức năng cũ)
+                    pcall(function()
+                        if not visitedServers then
+                            visitedServers = {}
+                            serverList = {}
+                            fileName = "teleported_servers.txt"
+                            if isfile(fileName) then
+                                for id in string.gmatch(readfile(fileName), "[^\n]+") do
+                                    visitedServers[id] = true
+                                    table.insert(serverList, id)
+                                end
+                            end
+                        end
+                        if not visitedServers[s.JobId] then
+                            visitedServers[s.JobId] = true
+                            table.insert(serverList, s.JobId)
+                            writefile(fileName, table.concat(serverList, "\n"))
+                        end
+                    end)
+                    
+                    th.New(string.format("🎯 Tìm thấy! Uptime %dh%02dm", h, m), 2)
+                    _G.isScanning = false
+                    TeleportService:TeleportToPlaceInstance(s.PlaceId, s.JobId, game.Players.LocalPlayer)
+                    return true
+                end
             end
         end
-    end
-    
-    cachedBossServers = bossServers
-    print("✅ Đã lưu " .. #bossServers .. " server có boss")
-end
-
-local function findValidServer()
-    if not cachedBossServers then
-        refreshCache()
-    end
-    
-    if #cachedBossServers == 0 then
-        return nil
-    end
-    
-    local currentJobId = game.JobId
-    local available = {}
-    for _, s in ipairs(cachedBossServers) do
-        if s.JobId ~= currentJobId then
-            table.insert(available, s)
+        
+        if page > 200 then
+            _G.isScanning = false
+            th.New("❌ Không tìm thấy server có boss", 3)
+            return false
         end
     end
-    
-    if #available == 0 then
-        return nil
-    end
-    
-    local selected = available[math.random(#available)]
-    return {
-        JobId = selected.JobId,
-        PlaceId = selected.PlaceId,
-        PlayerCount = selected.PlayerCount
-    }
 end
-
 -- HÀM TELEPORT MỚI
 -- 🏆 Hàm Teleport() mới
 local function Teleport()
