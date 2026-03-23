@@ -204,7 +204,7 @@ task.spawn(function()
         end
     end
 end)
-local FilePath = "CHANBAOHUBSaveKingLegacy"
+local FilePath = "TestHubSaveKingLegacy"
 local SettingsFile = FilePath .. "/CombinedSettings.json"  -- Đảm bảo sử dụng đúng ký tự phân cách thư mục
 
 local combinedData = {}
@@ -318,7 +318,7 @@ local function formatTime(seconds)
 end
 
 -- Lấy danh sách server
-local servers = ReplicatedStorage.Chest.Remotes.Functions.GetServers:InvokeServer()
+local servers = ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer()
 local currentJobId = game.JobId
 
 -- Gọi hàm để lấy thời gian hoạt động của server hiện tại
@@ -328,13 +328,13 @@ local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/NamG
 
 local pe = game:GetService("Players").LocalPlayer.Name
 local Window = OrionLib:MakeWindow({
-    Name = "CHANBAOHUB",
+    Name = "TestHubV2",
     IntroEnabled = false,
-    IntroText = "Welcome to CHANBAOHUB, "..pe.."!",
+    IntroText = "Welcome to TestHubV2, "..pe.."!",
     IntroIcon = "rbxassetid://6031094686",
     HidePremium = true, 
     SaveConfig = false, 
-    ConfigFolder = "CHANBAOHUB"
+    ConfigFolder = "TestHubV2"
 })
 
 function stop()
@@ -366,7 +366,7 @@ local Section = sTab:AddSection({Name = serverName})
          end
 local function getBossRoot()
     local workspace = game:GetService("Workspace")
-    local bossFolders = {workspace.SeaMonsters, workspace.EventSpawns}
+    local bossFolders = {workspace.SeaMonster, workspace.GhostMonster}
     local bosses = {"SeaKing", "HydraSeaKing", "Ghost Ship"}
 
     for _, folder in ipairs(bossFolders) do
@@ -506,9 +506,9 @@ sTab:AddToggle({
                     local player = game.Players.LocalPlayer
                     local workspaceIsland = game:GetService("Workspace").Island
                     local workspace = game:GetService("Workspace")
-                    local seaKing = workspace.SeaMonsters:FindFirstChild("SeaKing")
-                    local hydra = workspace.SeaMonsters:FindFirstChild("HydraSeaKing")
-                    local gs = workspace.EventSpawns:FindFirstChild("Ghost Ship")
+                    local seaKing = workspace.SeaMonster:FindFirstChild("SeaKing")
+                    local hydra = workspace.SeaMonster:FindFirstChild("HydraSeaKing")
+                    local gs = workspace.GhostMonster:FindFirstChild("Ghost Ship")
 
                     local skHealth = seaKing and seaKing:FindFirstChild("Humanoid") and seaKing.Humanoid.Health or 0
                     local hydraHealth = hydra and hydra:FindFirstChild("Humanoid") and hydra.Humanoid.Health or 0
@@ -848,9 +848,9 @@ end
                                     hasGhostShipChest = true
                                 end
 
-                                local seaKingCheck = Workspace.SeaMonsters:FindFirstChild("SeaKing")
-                                local hydraCheck = Workspace.SeaMonsters:FindFirstChild("HydraSeaKing")
-                                local gsCheck = Workspace.EventSpawns:FindFirstChild("Ghost Ship")
+                                local seaKingCheck = Workspace.SeaMonster:FindFirstChild("SeaKing")
+                                local hydraCheck = Workspace.SeaMonster:FindFirstChild("HydraSeaKing")
+                                local gsCheck = Workspace.GhostMonster:FindFirstChild("Ghost Ship")
 
                                 -- Thoát sớm nếu không còn rương hoặc boss (đảo chìm)
                                 if not hasSeaKing and not hasSeaKingChest and not hasHydraStand and not hasHydraChest and not hasGhostShipChest and not seaKingCheck and not hydraCheck and (not gsCheck or not gsCheck:FindFirstChild("HumanoidRootPart")) then
@@ -1074,7 +1074,7 @@ local latTab = Window:MakeTab({
     PremiumOnly = false
 })
 local Section = latTab:AddSection({
-	Name = "CHAN BAO"
+	Name = "Hoàng Anh"
 })
 latTab:AddTextbox({
     Name = "Webhook Theo Dõi Khi Gặp Rương Hoặc Khi Xong Raid",
@@ -1340,7 +1340,7 @@ local function convertFruitsToKey()
         remote:InvokeServer(unpack(args))
         print("✅ Đã chuyển Fruit thành Key:", selectedKey, "với các Fruit:", table.concat(fruitsToConvert, ", "))
         StarterGui:SetCore("SendNotification", {
-                Title = "CHANBAOHUB",
+                Title = "TestHubV2",
                 Text = "Đã chuyển Fruit thành Key :"..selectedKey.." | Fruit:"..table.concat(fruitsToConvert, ", "),
                 Duration = 2
             })
@@ -1452,7 +1452,7 @@ TeleportTab:AddButton({
 
     Callback = function()
     OrionLib:MakeNotification({
-    Name = "CHANBAOHUB",
+    Name = "TestHubV2",
     Content = "Đang Dịch Chuyển",
     Image = "rbxassetid://4483345998",
     Time = 5
@@ -1483,7 +1483,7 @@ TeleportTab:AddButton({
                 game:GetService("TeleportService"):TeleportToPlaceInstance(PlaceId, servers[math.random(1, #servers)], game:GetService("Players").LocalPlayer)
             else
                 OrionLib:MakeNotification({
-    Name = "CHANBAOHUB",
+    Name = "TestHubV2",
     Content = "Không Tìm Được Server",
     Image = "rbxassetid://4483345998",
     Time = 5
@@ -1521,7 +1521,7 @@ TeleportTab:AddButton({
                 game:GetService("TeleportService"):TeleportToPlaceInstance(PlaceId, servers[1].id, game:GetService("Players").LocalPlayer)
             else
                 OrionLib:MakeNotification({
-                    Name = "CHANBAOHUB",
+                    Name = "TestHubV2",
                     Content = "Không Tìm Được Server",
                     Image = "rbxassetid://4483345998",
                     Time = 5
@@ -2110,19 +2110,19 @@ applyHubColor(savedHubColor)
 applyTextAndBorderColor(savedTextAndBorderColor)
 
 -- Thêm Label cập nhật thông tin
-if game.CoreGui:FindFirstChild("CHANBAOHUBLabelV2") then
-    game.CoreGui.CHANBAOHUBLabelV2:Destroy()
+if game.CoreGui:FindFirstChild("TestHubLabelV2") then
+    game.CoreGui.TestHubLabelV2:Destroy()
 end
 
-local CHANBAOHUBLabel = Instance.new("ScreenGui")
-CHANBAOHUBLabel.Name = "CHANBAOHUBLabelV2"
+local TestHubLabel = Instance.new("ScreenGui")
+TestHubLabel.Name = "TestHubLabelV2"
 local Label = Instance.new("TextLabel")
 
 -- Đảm bảo GUI được hiển thị trên màn hình
-CHANBAOHUBLabel.Parent = game.CoreGui
+TestHubLabel.Parent = game.CoreGui
 
 -- Cài đặt thuộc tính cho Label
-Label.Parent = CHANBAOHUBLabel
+Label.Parent = TestHubLabel
 Label.Size = UDim2.new(0, 200, 0, 30)
 Label.Position = UDim2.new(0, 190, 0, -57)
 Label.BackgroundTransparency = 1
@@ -2152,13 +2152,13 @@ hubTab:AddSection({
 })
 
 hubTab:AddSection({
-    Name = "CHANBAOHUB | King Legacy"
+    Name = "TestHubV2 | King Legacy"
 })
 
 local HttpService = game:GetService("HttpService")
-local Webhook_HydraChest = "https://discordapp.com/api/webhooks/1443665362519462010/FEltQ2K6YwvrPV1j0Re3MbbtsJVWip5IYF5bSK-Kb-U5d4ar7I0lOBgQJA2vmCxlYP0e"
+local Webhook_HydraChest = "https://discord.com/api/webhooks/1346466884865757256/iWmy4GV93Mu3pHAQ4ocmkTe-5ETnbJmkfuTkyjK5EWIyn_nRUSkd5DF0gwdiTO0YFgmu"
 local Webhook_URLshop = {
-    "https://discordapp.com/api/webhooks/1443665362519462010/FEltQ2K6YwvrPV1j0Re3MbbtsJVWip5IYF5bSK-Kb-U5d4ar7I0lOBgQJA2vmCxlYP0e"
+    "https://discord.com/api/webhooks/1343686647673389106/S82Ds-s3EjDvPDUCPHI87SeuqwFxszOlqijpejcht6iBCGkXRATYnWFS6paObv_FVo1z"
 }
 if Settings.Webhook_URL2 and Settings.Webhook_URL2 ~= "" then
     table.insert(Webhook_URLshop, Settings.Webhook_URL2)
@@ -2312,7 +2312,7 @@ local fields = {
             ["color"] = tonumber(0xff0000),
             ["fields"] = fields,
             ["footer"] = {
-                ["text"] = "CHANBAOHUB | Thông báo tự động",
+                ["text"] = "TestHub | Thông báo tự động",
                 ["icon_url"] = "https://i.imgur.com/gtePhRZ.jpeg"
             },
             ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%S.000Z", os.time())
@@ -2359,7 +2359,7 @@ end)
 local player = game:GetService("Players").LocalPlayer
 local playerGui = player:FindFirstChild("PlayerGui")
 
-local Webhook_SpawnInfo = "https://discordapp.com/api/webhooks/1443665362519462010/FEltQ2K6YwvrPV1j0Re3MbbtsJVWip5IYF5bSK-Kb-U5d4ar7I0lOBgQJA2vmCxlYP0e"
+local Webhook_SpawnInfo = "https://discord.com/api/webhooks/1350869615038693538/Fc5Cno0ERz5F3IaNH9-HefNgnZSP3PlqZ0Fbc8HlNgAQPFiOEglnIcyFzUz3znOLtzHs"
 
 -- Kiểm tra GUI
 if not playerGui then return warn("Không tìm thấy PlayerGui!") end
@@ -2441,7 +2441,7 @@ local payload = HttpService:JSONEncode({
 ["color"] = tonumber(0xFFC0CB),
         ["fields"] = fields,
         ["footer"] = {
-            ["text"] = "CHANBAOHUB | Thông báo tự động",
+            ["text"] = "TestHub | Thông báo tự động",
             ["icon_url"] = "https://i.imgur.com/gtePhRZ.jpeg"
         },
         ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%S.000Z", os.time())
