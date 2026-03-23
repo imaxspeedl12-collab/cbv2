@@ -561,6 +561,7 @@ local function removeOldestServer()
 end
 
 -- ===== AUTO HOP MỚI =====
+-- ===== AUTO HOP LIÊN TỤC (CHỈ DỪNG KHI TẮT TOGGLE) =====
 sTab:AddToggle({
     Name = "Auto Hop Thông Minh | Beta (Sea King, Hydra)",
     Default = Settings.autoskhdhop,
@@ -578,10 +579,11 @@ sTab:AddToggle({
                     local currentJobId = game.JobId
                     local currentPlaceId = game.PlaceId
                     local page = 1
-                    local found = false
                     local scanned = 0
-                    local triedServers = {} -- Lưu server đã thử
+                    local triedServers = {}
+                    local found = false
                     
+                    -- Quét tìm server có boss và còn chỗ
                     while page <= MAX_PAGE and not found do
                         local success, servers = pcall(function()
                             return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer({ page = page })
@@ -616,12 +618,10 @@ sTab:AddToggle({
                                     isBossTime = true
                                 end
                                 
-                                -- Bỏ qua server đã thử
                                 if isBossTime and players < 12 and not triedServers[s.JobId] then
                                     print(string.format("🎯 TÌM THẤY! %dh%02dm | %d/12 người", h, m, players))
                                     print("🚀 ĐANG HOP...")
                                     
-                                    -- Thử hop
                                     local hopSuccess, hopErr = pcall(function()
                                         TeleportService:TeleportToPlaceInstance(s.PlaceId, s.JobId, game.Players.LocalPlayer)
                                     end)
@@ -629,13 +629,11 @@ sTab:AddToggle({
                                     if hopSuccess then
                                         print("✅ HOP THÀNH CÔNG!")
                                         found = true
-                                        getgenv().SeaKinghop = false
+                                        -- KHÔNG TẮT TOGGLE, tiếp tục vòng lặp sau khi vào server mới
                                         break
                                     else
-                                        -- Hop thất bại (server full)
-                                        print("⚠️ HOP THẤT BẠI (có thể server full), thử server khác...")
+                                        print("⚠️ HOP THẤT BẠI, thử server khác...")
                                         triedServers[s.JobId] = true
-                                        th.New("Server full, tìm server khác...", 2)
                                     end
                                 end
                             end
@@ -645,11 +643,19 @@ sTab:AddToggle({
                     end
                     
                     if not found then
-                        print("❌ Không tìm thấy server có boss")
-                        th.New("Không tìm thấy server có boss", 3)
+                        print("❌ Lượt quét này không tìm thấy server, đợi 10 giây rồi quét lại...")
+                        for i = 10, 1, -1 do
+                            if not getgenv().SeaKinghop then break end
+                            task.wait(1)
+                        end
+                    else
+                        -- Đã hop thành công, đợi 5 giây rồi tiếp tục tìm server khác
+                        print("✅ Đã hop, đợi 5 giây rồi tìm server tiếp...")
+                        for i = 5, 1, -1 do
+                            if not getgenv().SeaKinghop then break end
+                            task.wait(1)
+                        end
                     end
-                    
-                    task.wait(5)
                 end
             end)
         end
