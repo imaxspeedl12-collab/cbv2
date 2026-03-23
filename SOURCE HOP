@@ -280,11 +280,10 @@ local function formatTime(seconds)
     return string.format("%d:%d:%d:%d", days, hours, minutes, seconds)
 end
 
--- Lấy danh sách server
-local servers = ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer()
+-- Lấy danh sách server hiện tại
+local servers = ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer({ page = 1 })
 local currentJobId = game.JobId
 
--- Lấy thông tin server hiện tại
 local currentServer = nil
 for _, s in ipairs(servers) do
     if s.JobId == currentJobId then
@@ -542,151 +541,26 @@ if isfile(fileName) then
 end
 
 local function saveTeleportedServers(jobId)
-    if not visitedServers[jobId] then
-        visitedServers[jobId] = true
-        table.insert(serverList, jobId)
-        writefile(fileName, table.concat(serverList, "\n"))
-    end
+    pcall(function()
+        if not visitedServers[jobId] then
+            visitedServers[jobId] = true
+            table.insert(serverList, jobId)
+            writefile(fileName, table.concat(serverList, "\n"))
+        end
+    end)
 end
 
 local function removeOldestServer()
-    if #serverList > 0 then
-        local removedId = table.remove(serverList, 1)
-        visitedServers[removedId] = nil
-        writefile(fileName, table.concat(serverList, "\n"))
-    end
+    pcall(function()
+        if #serverList > 0 then
+            local removedId = table.remove(serverList, 1)
+            visitedServers[removedId] = nil
+            writefile(fileName, table.concat(serverList, "\n"))
+        end
+    end)
 end
 
--- HÀM GETSERVERUPTIME MỚI (DÙNG CreatedAt)
-local function getServerUptime(server)
-    return os.time() - server.CreatedAt
-end
-
-local function findAndHopImmediately()
-    if _G.isScanning then
-        th.New("Đang quét, vui lòng đợi...", 2)
-        return false
-    end
-    
-    _G.isScanning = true
-    th.New("🔄 Bắt đầu quét server...", 2)
-    
-    local rs = game:GetService("ReplicatedStorage")
-    local getServers = rs:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists")
-    local currentJobId = game.JobId
-    local currentPlaceId = game.PlaceId
-    local page = 1
-    local allFoundServers = {} -- Lưu server tìm thấy để lưu vào file
-    
-    while true do
-        local batchServers = {}
-        
-        -- Quét 10 page
-        for i = 1, 10 do
-            local success, servers = pcall(function()
-                return getServers:InvokeServer({ page = page })
-            end)
-            if not success or not servers or #servers == 0 then
-                _G.isScanning = false
-                th.New("❌ Không còn server", 2)
-                return false
-            end
-            for _, s in ipairs(servers) do
-                table.insert(batchServers, s)
-            end
-            page = page + 1
-            task.wait(0.03)
-            if page > 200 then break
-        end
-        
-        -- Kiểm tra lô này có boss không
-        for _, s in ipairs(batchServers) do
-            if s.JobId and s.JobId ~= currentJobId and s.PlaceId == currentPlaceId and s.CreatedAt and s.PlayerCount then
-                local uptime = os.time() - s.CreatedAt
-                local h = math.floor(uptime / 3600)
-                local m = math.floor((uptime % 3600) / 60)
-                
-                if (h == 4 and m >= 21 and m <= 30) or
-                   (h == 8 and m >= 52 and m <= 59) or (h == 9 and m <= 1) or
-                   (h == 0 and m >= 59 and m <= 67) or
-                   (h == 2 and m >= 7 and m <= 14) or
-                   (h == 3 and m >= 14 and m <= 21) or
-                   (h == 5 and m >= 31 and m <= 37) or
-                   (h == 13 and m >= 28 and m <= 35) or
-                   (h == 18 and m >= 10 and m <= 17) or
-                   (h == 7 and m >= 45 and m <= 52) or
-                   (h == 6 and m >= 38 and m <= 45) or
-                   (h == 10 and m >= 3 and m <= 9) or
-                   (h == 11 and m >= 11 and m <= 17) then
-                    
-                    -- LƯU SERVER ĐÃ HOP (giữ chức năng cũ)
-                    pcall(function()
-                        if not visitedServers then
-                            visitedServers = {}
-                            serverList = {}
-                            fileName = "teleported_servers.txt"
-                            if isfile(fileName) then
-                                for id in string.gmatch(readfile(fileName), "[^\n]+") do
-                                    visitedServers[id] = true
-                                    table.insert(serverList, id)
-                                end
-                            end
-                        end
-                        if not visitedServers[s.JobId] then
-                            visitedServers[s.JobId] = true
-                            table.insert(serverList, s.JobId)
-                            writefile(fileName, table.concat(serverList, "\n"))
-                        end
-                    end)
-                    
-                    th.New(string.format("🎯 Tìm thấy! Uptime %dh%02dm", h, m), 2)
-                    _G.isScanning = false
-                    TeleportService:TeleportToPlaceInstance(s.PlaceId, s.JobId, game.Players.LocalPlayer)
-                    return true
-                end
-            end
-        end
-        
-        if page > 200 then
-            _G.isScanning = false
-            th.New("❌ Không tìm thấy server có boss", 3)
-            return false
-        end
-    end
-end
--- HÀM TELEPORT MỚI
--- 🏆 Hàm Teleport() mới
-local function Teleport()
-    print("🔄 Teleport: đang tìm server...")
-    local selectedServer = findValidServer()
-    
-    if selectedServer then
-        print("✅ Teleport: tìm thấy server:", selectedServer.JobId)
-        print("   PlaceId:", selectedServer.PlaceId)
-        print("   Số người:", selectedServer.PlayerCount)
-        
-        -- Lưu server đã tele (nếu cần)
-        if saveTeleportedServers then
-            saveTeleportedServers(selectedServer.JobId)
-        end
-        
-        th.New("Đang hop sang server có boss", 2)
-        TeleportService:TeleportToPlaceInstance(selectedServer.PlaceId, selectedServer.JobId, game.Players.LocalPlayer)
-        return true
-    else
-        print("❌ Teleport: không tìm thấy server phù hợp")
-        if removeOldestServer then
-            removeOldestServer()
-        end
-        th.New("Không tìm thấy server có boss", 3)
-        return false
-    end
-end
-
-local waitedOnce = false
-local initialBeli = game.Players.LocalPlayer:WaitForChild("PlayerStats"):WaitForChild("beli").Value
-local initialGem = game.Players.LocalPlayer:WaitForChild("PlayerStats"):WaitForChild("Gem").Value
-
+-- ===== AUTO HOP MỚI =====
 sTab:AddToggle({
     Name = "Auto Hop Thông Minh | Beta (Sea King, Hydra)",
     Default = Settings.autoskhdhop,
@@ -694,159 +568,76 @@ sTab:AddToggle({
         getgenv().SeaKinghop = value
         Settings.autoskhdhop = value
         SaveSettings()
-        if not value then return end
-
-        spawn(function()
-            while getgenv().SeaKinghop do
-                task.wait(0.6)
-                local Workspace = game:GetService("Workspace")
-                local workspaceIsland = Workspace.Island
-                local Players = game:GetService("Players")
-                local LocalPlayer = Players.LocalPlayer
-                local PlayerStats = LocalPlayer.PlayerStats
-                local MainGui = LocalPlayer.PlayerGui.MainGui
-                local SecondSea = MainGui.StarterFrame.LegacyPoseFrame.SecondSea
-                local seaKing = Workspace.SeaMonster:FindFirstChild("SeaKing")
-                local hydra = Workspace.SeaMonster:FindFirstChild("HydraSeaKing")
-                local gs = Workspace.GhostMonster:FindFirstChild("Ghost Ship")
-                local skTimeLabel = SecondSea:FindFirstChild("SKTimeLabel")
-                local gsTimeLabel = SecondSea:FindFirstChild("GSTimeLabel")
-
-                local function ConvertTimeToSeconds(timeStr)
-                    local h, m, s = timeStr:match("(%d+):(%d+):(%d+)")
-                    if h and m and s then
-                        return tonumber(h) * 3600 + tonumber(m) * 60 + tonumber(s)
+        
+        if value then
+            spawn(function()
+                while getgenv().SeaKinghop do
+                    print("🔄 Auto Hop: đang tìm server...")
+                    
+                    local MAX_PAGE = 200
+                    local currentJobId = game.JobId
+                    local currentPlaceId = game.PlaceId
+                    local page = 1
+                    local found = false
+                    local scanned = 0
+                    
+                    while page <= MAX_PAGE and not found do
+                        local success, servers = pcall(function()
+                            return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer({ page = page })
+                        end)
+                        if not success or not servers then break end
+                        
+                        scanned = scanned + #servers
+                        if page % 20 == 0 then
+                            print("   Đã quét " .. page .. " page (" .. scanned .. " server)")
+                        end
+                        
+                        for _, s in ipairs(servers) do
+                            if s.JobId and s.JobId ~= currentJobId and s.PlaceId == currentPlaceId and s.CreatedAt and s.PlayerCount then
+                                local uptime = os.time() - s.CreatedAt
+                                local h = math.floor(uptime / 3600)
+                                local m = math.floor((uptime % 3600) / 60)
+                                local players = s.PlayerCount
+                                
+                                local isBossTime = false
+                                if (h == 4 and m >= 21 and m <= 30) or
+                                   (h == 8 and m >= 52 and m <= 59) or (h == 9 and m <= 1) or
+                                   (h == 0 and m >= 59 and m <= 67) or
+                                   (h == 2 and m >= 7 and m <= 14) or
+                                   (h == 3 and m >= 14 and m <= 21) or
+                                   (h == 5 and m >= 31 and m <= 37) or
+                                   (h == 13 and m >= 28 and m <= 35) or
+                                   (h == 18 and m >= 10 and m <= 17) or
+                                   (h == 7 and m >= 45 and m <= 52) or
+                                   (h == 6 and m >= 38 and m <= 45) or
+                                   (h == 10 and m >= 3 and m <= 9) or
+                                   (h == 11 and m >= 11 and m <= 17) then
+                                    isBossTime = true
+                                end
+                                
+                                if isBossTime and players < 12 then
+                                    print(string.format("🎯 TÌM THẤY! %dh%02dm | %d/12 người", h, m, players))
+                                    th.New("Đang hop sang server có boss", 2)
+                                    TeleportService:TeleportToPlaceInstance(s.PlaceId, s.JobId, game.Players.LocalPlayer)
+                                    found = true
+                                    getgenv().SeaKinghop = false
+                                    break
+                                end
+                            end
+                        end
+                        page = page + 1
+                        task.wait(0.03)
                     end
-                    return 9999
+                    
+                    if not found then
+                        print("❌ Không tìm thấy server có boss")
+                        th.New("Không tìm thấy server có boss", 3)
+                    end
+                    
+                    task.wait(5)
                 end
-
-                local skSpawnTime = skTimeLabel and ConvertTimeToSeconds(skTimeLabel.Text) or 9999
-                local gsSpawnTime = gsTimeLabel and ConvertTimeToSeconds(gsTimeLabel.Text) or 9999
-
-                local function spamTeleport()
-    print("🔥 spamTeleport ĐƯỢC GỌI!")  -- <-- THÊM DÒNG NÀY
-    coroutine.wrap(function()
-        while getgenv().SeaKinghop do
-            local success = pcall(function()
-                Teleport()
             end)
-            if success then
-                break
-            end
-            task.wait(0.2)
         end
-    end)()
-end
-
-                if skSpawnTime < Settings.HopThreshold then
-                    th.New("Sea King hoặc Hydra spawn sau " .. skSpawnTime .. " giây, không hop!", 1)
-                    task.wait()
-                elseif gsSpawnTime < Settings.HopThreshold then
-                    th.New("Ghost Ship spawn sau " .. gsSpawnTime .. " giây, không hop!", 1)
-                    task.wait()
-                elseif gs and gs:FindFirstChild("HumanoidRootPart") then
-                    th.New("Ghost Ship đang hiện diện, không hop!", 1)
-                    task.wait()
-                elseif getBossRoot() then
-                    th.New("Boss đang hiện diện, không hop!", 1)
-                    task.wait()
-                else
-                    local hasSeaKing = false
-                    for _, islandName in ipairs({"Legacy Island1", "Legacy Island2", "Legacy Island3", "Legacy Island4"}) do
-                        local island = workspaceIsland:FindFirstChild(islandName)
-                        if island and island:FindFirstChild("ChestSpawner") then
-                            hasSeaKing = true
-                        end
-                    end
-
-                    local hasHydraStand = false
-                    for _, name in ipairs({"Sea King Thunder", "Sea King Water", "Sea King Lava"}) do
-                        local island = workspaceIsland:FindFirstChild(name)
-                        if island then
-                            if island:FindFirstChild("HydraStand") then
-                                hasHydraStand = true
-                            end
-                        end
-                    end
-
-                    local hasGhostShipChest = false
-                    local ghostShipChest = Workspace:FindFirstChild("Chest1")
-                    if ghostShipChest then
-                        hasGhostShipChest = true
-                    end
-
-                    if not hasSeaKing and not hasHydraStand and not hasGhostShipChest and not hydra and (not gs or not gs:FindFirstChild("HumanoidRootPart") or not seaKing:FindFirstChild("HumanoidRootPart")) then
-                        spamTeleport()
-                    else
-                        local function hasCollectedChest()
-                            local timeout = 220
-                            local elapsedTime = 0
-                            while elapsedTime < timeout do
-                                task.wait(0.1)
-                                elapsedTime = elapsedTime + 0.1
-                                local currentBeli = PlayerStats.beli.Value
-                                local currentGem = PlayerStats.Gem.Value
-                                if (hasSeaKing or hasSeaKingChest or hasHydraStand or hasHydraChest) and currentBeli > initialBeli and currentGem > initialGem then
-                                    return true
-                                elseif hasGhostShipChest then
-                                    th.New("Đã nhặt rương Ghost Ship!", 2)
-                                    return true
-                                end
-                                hasSeaKing = false
-                                hasSeaKingChest = false
-                                for _, islandName in ipairs({"Legacy Island1", "Legacy Island2", "Legacy Island3", "Legacy Island4"}) do
-                                    local island = workspaceIsland:FindFirstChild(islandName)
-                                    if island and island:FindFirstChild("ChestSpawner") then
-                                        hasSeaKing = true
-                                        for _, v in pairs(island.ChestSpawner:GetChildren()) do
-                                            if v:IsA("Model") and v.Name:match("Chest$") then
-                                                hasSeaKingChest = true
-                                                break
-                                            end
-                                        end
-                                    end
-                                    if hasSeaKingChest then break end
-                                end
-                                hasHydraStand = false
-                                hasHydraChest = false
-                                for _, name in ipairs({"Sea King Thunder", "Sea King Water", "Sea King Lava"}) do
-                                    local island = workspaceIsland:FindFirstChild(name)
-                                    if island then
-                                        if island:FindFirstChild("HydraStand") then
-                                            hasHydraStand = true
-                                        end
-                                        for _, chest in ipairs(island:GetChildren()) do
-                                            if chest:IsA("Model") and chest.Name:match("Chest$") then
-                                                hasHydraChest = true
-                                                break
-                                            end
-                                        end
-                                    end
-                                    if hasHydraChest then break end
-                                end
-                                local ghostShipChestCheck = Workspace:FindFirstChild("Chest1")
-                                if ghostShipChestCheck and ghostShipChestCheck:FindFirstChild("Top") then
-                                    hasGhostShipChest = true
-                                end
-                                local seaKingCheck = Workspace.SeaMonster:FindFirstChild("SeaKing")
-                                local hydraCheck = Workspace.SeaMonster:FindFirstChild("HydraSeaKing")
-                                local gsCheck = Workspace.GhostMonster:FindFirstChild("Ghost Ship")
-                                if not hasSeaKing and not hasSeaKingChest and not hasHydraStand and not hasHydraChest and not hasGhostShipChest and not seaKingCheck and not hydraCheck and (not gsCheck or not gsCheck:FindFirstChild("HumanoidRootPart")) then
-                                    return false
-                                end
-                            end
-                            return false
-                        end
-                        if hasCollectedChest() then
-                            spamTeleport()
-                        else
-                            th.New("Không nhặt được rương, dịch chuyển ngay!", 2)
-                            spamTeleport()
-                        end
-                    end
-                end
-            end
-        end)
     end
 })
 
@@ -998,6 +789,7 @@ sTab:AddToggle({
 })
 end
 
+-- ===== PHẦN LẶT VẶT =====
 if not sea(4) then
 local latTab = Window:MakeTab({
     Name = "Lặt Vặt",
@@ -1009,11 +801,10 @@ local Section = latTab:AddSection({
 })
 latTab:AddTextbox({
     Name = "Webhook Theo Dõi Khi Gặp Rương Hoặc Khi Xong Raid",
-    Default = Webhook_URL2,
+    Default = Settings.Webhook_URL2,
     TextDisappear = false,
     Callback = function(value)
         if value and value:match("^https://discord.com/api/webhooks/") then
-            Webhook_URL2 = value
             Settings.Webhook_URL2 = value
             SaveSettings()
             StarterGui:SetCore("SendNotification", {
@@ -1033,7 +824,7 @@ latTab:AddTextbox({
 
 latTab:AddToggle({
     Name = "Auto Vứt Fruit",
-    Default = dropfruit,
+    Default = Settings.dropfruit,
     Callback = function(value)
         Settings.dropfruit = value
         SaveSettings()
@@ -1086,8 +877,7 @@ latTab:AddButton({
         local player = game:GetService("Players").LocalPlayer
         local humanoidRootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
         local passiveTree = game:GetService("Workspace"):FindFirstChild("AllNPC") and game.Workspace.AllNPC:FindFirstChild("PassiveTree")
-        local replicatedStorage = game:GetService("ReplicatedStorage")
-        local remote = replicatedStorage.Chest.Remotes.Functions.EtcFunction
+        local remote = ReplicatedStorage.Chest.Remotes.Functions.EtcFunction
         if humanoidRootPart and passiveTree then
             humanoidRootPart.CFrame = passiveTree.CFrame * CFrame.new(10,10,0)
             wait(1)
@@ -1146,7 +936,7 @@ keyTab:AddButton({
                 [1] = selectedKey,
                 [2] = quantityToBuy
             }
-            game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("BuyKey"):InvokeServer(unpack(args))
+            ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("BuyKey"):InvokeServer(unpack(args))
         end
     end
 })
@@ -1169,7 +959,7 @@ keyTab:AddToggle({
                         [1] = selectedKey,
                         [2] = quantityToBuy
                     }
-                    game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("BuyKey"):InvokeServer(unpack(args))
+                    ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("BuyKey"):InvokeServer(unpack(args))
                 end
             end
         end)
@@ -1189,7 +979,7 @@ keyTab:AddToggle({
                         [1] = selectedKey,
                         [2] = "Open10"
                     }
-                    game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("UseKey"):InvokeServer(unpack(args))
+                    ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("UseKey"):InvokeServer(unpack(args))
                 end
             end
         end)
@@ -1197,10 +987,10 @@ keyTab:AddToggle({
 })
 
 local autoConvert = false
-local remote = game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("DealFruit")
+local remote = ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("DealFruit")
 
 local availableFruits = {}
-for _, fruit in ipairs(game:GetService("ReplicatedStorage").Chest.Fruits:GetChildren()) do
+for _, fruit in ipairs(ReplicatedStorage.Chest.Fruits:GetChildren()) do
     table.insert(availableFruits, fruit.Name)
 end
 
@@ -1262,13 +1052,12 @@ keyTab:AddToggle({
 })
 end
 
+-- ===== SERVER INFO TAB =====
 local TeleportTab = Window:MakeTab({
     Name = "Server Info",
     Icon = "rbxassetid://4483345998",
     PremiumOnly = false
 })
-local TeleportService = game:GetService("TeleportService")
-local CoreGui = game:GetService("CoreGui")
 
 local function Rejoin()
     if not sea(4) then
@@ -1292,7 +1081,7 @@ TeleportTab:AddToggle({
             rejoinConnection = nil
         end
         if value then
-            rejoinConnection = CoreGui.RobloxPromptGui.promptOverlay.ChildAdded:Connect(function(child)
+            rejoinConnection = game:GetService("CoreGui").RobloxPromptGui.promptOverlay.ChildAdded:Connect(function(child)
                 if child.Name == "ErrorPrompt" and child:FindFirstChild("MessageArea") and child.MessageArea:FindFirstChild("ErrorFrame") then
                     wait(3)
                     print("Lỗi phát hiện! Đang rejoin...")
@@ -1355,7 +1144,7 @@ TeleportTab:AddButton({
                 end
             end
             if #servers > 0 then
-                game:GetService("TeleportService"):TeleportToPlaceInstance(PlaceId, servers[math.random(1, #servers)], game:GetService("Players").LocalPlayer)
+                TeleportService:TeleportToPlaceInstance(PlaceId, servers[math.random(1, #servers)], game.Players.LocalPlayer)
             else
                 OrionLib:MakeNotification({
                     Name = "TestHubV2",
@@ -1389,7 +1178,7 @@ TeleportTab:AddButton({
                 table.sort(servers, function(a, b)
                     return a.players < b.players
                 end)
-                game:GetService("TeleportService"):TeleportToPlaceInstance(PlaceId, servers[1].id, game:GetService("Players").LocalPlayer)
+                TeleportService:TeleportToPlaceInstance(PlaceId, servers[1].id, game.Players.LocalPlayer)
             else
                 OrionLib:MakeNotification({
                     Name = "TestHubV2",
@@ -1430,12 +1219,11 @@ TeleportTab:AddLabel("Executor: "..executor)
 TeleportTab:AddButton({
     Name = "Rejoin",
     Callback = function()
-        local tps = game:GetService("TeleportService")
-        local plr = game:GetService("Players").LocalPlayer
-        tps:TeleportToPlaceInstance(game.PlaceId, game.JobId, plr)
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, game.Players.LocalPlayer)
     end
 })
 
+-- ===== MISC TAB =====
 local MiscTab = Window:MakeTab({
     Name = "❕Misc",
     Icon = "rbxassetid://4483345998",
@@ -1507,60 +1295,7 @@ MiscTab:AddButton({
     end
 })
 
-local player = game:GetService("Players").LocalPlayer
-local gui
-
-repeat
-    gui = player.PlayerGui:FindFirstChild("MainGui")
-        and player.PlayerGui.MainGui:FindFirstChild("StarterFrame")
-        and player.PlayerGui.MainGui.StarterFrame:FindFirstChild("LegacyPoseFrame")
-        and player.PlayerGui.MainGui.StarterFrame.LegacyPoseFrame:FindFirstChild("SecondSea")
-    task.wait()
-until gui
-
-local skTimeLabel, gsTimeLabel, skImage, gsImage, hdImage
-
-repeat
-    skTimeLabel = gui:FindFirstChild("SKTimeLabel")
-    gsTimeLabel = gui:FindFirstChild("GSTimeLabel")
-    skImage = gui:FindFirstChild("SKImage")
-    gsImage = gui:FindFirstChild("GSImage")
-    hdImage = gui:FindFirstChild("HDImage")
-    task.wait()
-until skTimeLabel and gsTimeLabel and skImage and gsImage and hdImage
-
-local player = game:GetService("Players").LocalPlayer
-local gui = player.PlayerGui.MainGui.StarterFrame.LegacyPoseFrame.SecondSea
-gui.SKTimeLabel.Position = UDim2.new(0.5, 100, 0, -130)
-gui.GSTimeLabel.Position = UDim2.new(0.5, 250, 0, -130)
-
-local function updateImagePosition(label, image)
-    if label and image then
-        image.Position = UDim2.new(0, label.Position.X.Offset + label.Size.X.Offset + 70, label.Position.Y.Scale, label.Position.Y.Offset)
-    end
-end
-
-gsTimeLabel:GetPropertyChangedSignal("Position"):Connect(function()
-    updateImagePosition(gsTimeLabel, gsImage)
-end)
-
-skTimeLabel:GetPropertyChangedSignal("Position"):Connect(function()
-    updateImagePosition(skTimeLabel, skImage)
-    updateImagePosition(skTimeLabel, hdImage)
-end)
-
-updateImagePosition(gsTimeLabel, gsImage)
-updateImagePosition(skTimeLabel, skImage)
-updateImagePosition(skTimeLabel, hdImage)
-
-repeat task.wait(.1) until game:GetService("ReplicatedStorage"):FindFirstChild("Chest")
-    and game.ReplicatedStorage.Chest:FindFirstChild("Remotes")
-    and game.ReplicatedStorage.Chest.Remotes:FindFirstChild("Bindables")
-    and game.ReplicatedStorage.Chest.Remotes.Bindables:FindFirstChild("ClientBeckUI")
-
-local var17 = game:GetService("ReplicatedStorage").Chest.Remotes.Bindables.ClientBeckUI
-getgenv().AutoUpdateUI = false
-
+-- Pose UI
 local function getSeaPose()
     if sea(2) then
         return "SecondSea"
@@ -1569,6 +1304,9 @@ local function getSeaPose()
     end
     return ""
 end
+
+local var17 = ReplicatedStorage.Chest.Remotes.Bindables.ClientBeckUI
+getgenv().AutoUpdateUI = false
 
 local function AutoUpdate()
     spawn(function()
@@ -1630,6 +1368,7 @@ MiscTab:AddButton({
     end
 })
 
+-- ===== HUB TAB =====
 local hubTab = Window:MakeTab({
     Name = "Hub",
     Icon = "rbxassetid://4483345998",
@@ -1645,303 +1384,7 @@ hubTab:AddButton({
     end 
 })
 
-local rd = {104752867797759,88832603203016,121648173742029,132902492294028}
-if gethui():FindFirstChild("Orion") and game.Players.LocalPlayer.PlayerGui:FindFirstChild("ToggleUi") == nil then
-    local TOGGLE = {}
-    TOGGLE["Ui"] = Instance.new("ScreenGui", game.Players.LocalPlayer.PlayerGui)
-    TOGGLE["DaIcon"] = Instance.new("ImageButton", TOGGLE["Ui"])
-    TOGGLE["das"] = Instance.new("UICorner", TOGGLE["DaIcon"])
-    TOGGLE["Ui"].Name = "ToggleUi"
-    TOGGLE["Ui"].ResetOnSpawn = false
-    TOGGLE["DaIcon"].Size = UDim2.new(0,45,0,45)
-    TOGGLE["DaIcon"].Position = UDim2.new(0,0,0)
-    TOGGLE["DaIcon"].Draggable = true
-    TOGGLE["DaIcon"].Image = "rbxassetid://" .. rd[math.random(#rd)]
-    TOGGLE["DaIcon"].BackgroundColor3 = Color3.fromRGB(255, 182, 193)
-    TOGGLE["DaIcon"].BorderColor3 = Color3.fromRGB(255, 105, 180)
-    task.spawn(function()
-        while true do
-            for i = 0, 255, 4 do
-                TOGGLE["DaIcon"].BorderColor3 = Color3.fromHSV(i/256, 1, 1)
-                TOGGLE["DaIcon"].BackgroundColor3 = Color3.fromHSV(i/256, .5, .8)
-                task.wait()
-            end
-        end
-    end)
-    TOGGLE["DaIcon"].MouseButton1Click:Connect(function()
-        if gethui():FindFirstChild("Orion") then
-            for i,v in pairs(gethui():GetChildren()) do
-                if v.Name == "Orion" then
-                    v.Enabled = not v.Enabled
-                end
-            end
-        end
-    end)
-    TOGGLE["das"]["CornerRadius"] = UDim.new(0.20000000298023224, 0)
-end
-
-local HttpService = game:GetService("HttpService")
-local RunService = game:GetService("RunService")
-local hubColorFile = "HubColor.json"
-local textAndBorderColorFile = "TextAndBorderColor.json"
-local savedHubColor = nil
-local savedTextAndBorderColor = nil
-
-local function saveColor(color, path)
-    local colorData = { r = color.R, g = color.G, b = color.B }
-    local jsonData = HttpService:JSONEncode(colorData)
-    writefile(path, jsonData)
-end
-
-local function loadColor(path, defaultColor)
-    if isfile(path) then
-        local jsonData = readfile(path)
-        local colorData = HttpService:JSONDecode(jsonData)
-        return Color3.new(colorData.r, colorData.g, colorData.b)
-    else
-        return defaultColor
-    end
-end
-
-local function applyHubColor(hubColor)
-    if gethui():FindFirstChild("Orion") then
-        for _, i in pairs(gethui():GetChildren()) do
-            if i.Name == "Orion" then
-                for _, v in pairs(i:GetDescendants()) do
-                    if v.ClassName == "Frame" and v.BackgroundTransparency < 0.99 then
-                        v.BackgroundColor3 = hubColor
-                    end
-                end
-            end
-        end
-    end
-end
-
-local function applyTextAndBorderColor(color)
-    if gethui():FindFirstChild("Orion") then
-        for _, i in pairs(gethui():GetChildren()) do
-            if i.Name == "Orion" then
-                for _, v in pairs(i:GetDescendants()) do
-                    if v.ClassName == "Frame" then
-                        v.BorderColor3 = color
-                    end
-                    if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
-                        v.TextColor3 = color
-                    end
-                end
-            end
-        end
-    end
-end
-
-savedHubColor = loadColor(hubColorFile, Color3.fromRGB(0, 0, 0))
-savedTextAndBorderColor = loadColor(textAndBorderColorFile, Color3.fromRGB(255, 255, 255))
-
-local Anh_Gai_Alimi = {
-    "18273888587", "18275995451", "", "18277860491", "","72316572273088"
-}
-
-local previousBackgroundId = nil
-
-local function getRandomImageId()
-    local randomIndex = math.random(1, #Anh_Gai_Alimi)
-    return Anh_Gai_Alimi[randomIndex]
-end
-
-local function applyHubBackground(imageId)
-    if gethui():FindFirstChild("Orion") then
-        for _, gui in pairs(gethui():GetChildren()) do
-            if gui.Name == "Orion" then
-                local largestFrame = nil
-                local maxSize = 0
-                for _, frame in pairs(gui:GetDescendants()) do
-                    if frame:IsA("Frame") and frame.BackgroundTransparency < 1 then
-                        local frameSize = frame.AbsoluteSize.X * frame.AbsoluteSize.Y
-                        if frameSize > maxSize then
-                            maxSize = frameSize
-                            largestFrame = frame
-                        end
-                    end
-                end
-                if largestFrame then
-                    if largestFrame:FindFirstChild("HubBackground") then
-                        previousBackgroundId = largestFrame.HubBackground.Image
-                        largestFrame:FindFirstChild("HubBackground"):Destroy()
-                    end
-                    local background = Instance.new("ImageLabel")
-                    background.Name = "HubBackground"
-                    background.Parent = largestFrame
-                    background.Size = UDim2.new(1, 0, 1, 0)
-                    background.Position = UDim2.new(0, 0, 0, 0)
-                    background.Image = "rbxassetid://" .. imageId
-                    background.BackgroundTransparency = 1
-                    background.ImageTransparency = Settings.alime or 0.7
-                    background.ScaleType = Enum.ScaleType.Stretch
-                end
-            end
-        end
-    end
-end
-
-local function resetBackground()
-    if gethui():FindFirstChild("Orion") then
-        for _, gui in pairs(gethui():GetChildren()) do
-            if gui.Name == "Orion" then
-                for _, frame in pairs(gui:GetDescendants()) do
-                    if frame:IsA("Frame") then
-                        if frame:FindFirstChild("HubBackground") then
-                            frame:FindFirstChild("HubBackground"):Destroy()
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
-
-local function toggleBackground(isOn)
-    if isOn then
-        local randomImageId = getRandomImageId()
-        applyHubBackground(randomImageId)
-    else
-        resetBackground()
-        if previousBackgroundId then
-            applyHubBackground(previousBackgroundId)
-        end
-    end
-end
-
-hubTab:AddToggle({
-    Name = "Bật/Tắt Hình Nền",
-    Default = Settings.giaodien,
-    Callback = function(isOn)
-        Settings.giaodien = isOn
-        toggleBackground(isOn)
-        SaveSettings()
-    end
-})
-
-local function applyHubTransparency(transparency)
-    if gethui():FindFirstChild("Orion") then
-        for _, gui in pairs(gethui():GetChildren()) do
-            if gui.Name == "Orion" then
-                for _, frame in pairs(gui:GetDescendants()) do
-                    if frame:IsA("Frame") and frame.BackgroundTransparency < 0.99 then
-                        if frame.BackgroundTransparency ~= transparency then
-                            frame.BackgroundTransparency = transparency
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
-
-local function applyBackgroundTransparency(transparency)
-    if gethui():FindFirstChild("Orion") then
-        for _, gui in pairs(gethui():GetChildren()) do
-            if gui.Name == "Orion" then
-                for _, frame in pairs(gui:GetDescendants()) do
-                    if frame:IsA("Frame") then
-                        if frame:FindFirstChild("HubBackground") then
-                            local hubBackground = frame.HubBackground
-                            if hubBackground.ImageTransparency ~= transparency then
-                                hubBackground.ImageTransparency = transparency
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
-
-hubTab:AddSlider({
-    Name = "Độ Trong Suốt Hub",
-    Min = 0.0,
-    Max = 0.98,
-    Default = Settings.hub,
-    Increment = 0.1,
-    Callback = function(value)
-        Settings.hub = value
-        SaveSettings()
-        applyHubTransparency(value)
-    end
-})
-
-hubTab:AddSlider({
-    Name = "Độ Rõ Hình Nền",
-    Min = 0.1,
-    Max = 0.98,
-    Default = Settings.alime,
-    Increment = 0.1,
-    Callback = function(value)
-        Settings.alime = value
-        SaveSettings()
-        applyBackgroundTransparency(value)
-    end
-})
-
-hubTab:AddColorpicker({
-    Name = "Đổi Màu Hub",
-    Default = savedHubColor,
-    Callback = function(Value)
-        savedHubColor = Value
-        saveColor(Value, hubColorFile)
-        applyHubColor(savedHubColor)
-    end
-})
-
-hubTab:AddColorpicker({
-    Name = "Đổi Màu Chữ",
-    Default = savedTextAndBorderColor,
-    Callback = function(Value)
-        savedTextAndBorderColor = Value
-        saveColor(Value, textAndBorderColorFile)
-        applyTextAndBorderColor(savedTextAndBorderColor)
-    end
-})
-
-applyBackgroundTransparency(Settings.alime)
-applyHubTransparency(Settings.hub)
-applyHubColor(savedHubColor)
-applyTextAndBorderColor(savedTextAndBorderColor)
-
-if game.CoreGui:FindFirstChild("TestHubLabelV2") then
-    game.CoreGui.TestHubLabelV2:Destroy()
-end
-
-local TestHubLabel = Instance.new("ScreenGui")
-TestHubLabel.Name = "TestHubLabelV2"
-local Label = Instance.new("TextLabel")
-TestHubLabel.Parent = game.CoreGui
-Label.Parent = TestHubLabel
-Label.Size = UDim2.new(0, 200, 0, 30)
-Label.Position = UDim2.new(0, 190, 0, -57)
-Label.BackgroundTransparency = 1
-Label.TextScaled = true
-Label.TextColor3 = savedTextAndBorderColor
-Label.Font = Enum.Font.SourceSans
-Label.Text = "Loading..."
-
-local lastUpdate = 0
-RunService.RenderStepped:Connect(function()
-    if tick() - lastUpdate >= 1 then
-        lastUpdate = tick()
-        local fps = math.floor(1 / RunService.RenderStepped:Wait())
-        local ping = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValueString()
-        local time = os.date("%H:%M:%S")
-        Label.Text = string.format("Time: %s | FPS: %d | Ping: %s ms", time, fps, ping)
-    end
-end)
-
-hubTab:AddSection({
-    Name = "Cre: ginchao"
-})
-hubTab:AddSection({
-    Name = "TestHubV2 | King Legacy"
-})
-
+-- ===== CÁC PHẦN CÒN LẠI (Webhook, Island, Chest Check, v.v) =====
 local HttpService = game:GetService("HttpService")
 local Webhook_HydraChest = "https://discord.com/api/webhooks/1346466884865757256/iWmy4GV93Mu3pHAQ4ocmkTe-5ETnbJmkfuTkyjK5EWIyn_nRUSkd5DF0gwdiTO0YFgmu"
 local Webhook_URLshop = {
@@ -2203,4 +1646,5 @@ httprequest({
     Headers = { ['Content-Type'] = 'application/json' },
     Body = payload
 })
+
 OrionLib:Init()
