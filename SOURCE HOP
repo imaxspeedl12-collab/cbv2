@@ -580,6 +580,7 @@ sTab:AddToggle({
                     local page = 1
                     local found = false
                     local scanned = 0
+                    local triedServers = {} -- Lưu server đã thử
                     
                     while page <= MAX_PAGE and not found do
                         local success, servers = pcall(function()
@@ -615,13 +616,27 @@ sTab:AddToggle({
                                     isBossTime = true
                                 end
                                 
-                                if isBossTime and players < 12 then
+                                -- Bỏ qua server đã thử
+                                if isBossTime and players < 12 and not triedServers[s.JobId] then
                                     print(string.format("🎯 TÌM THẤY! %dh%02dm | %d/12 người", h, m, players))
-                                    th.New("Đang hop sang server có boss", 2)
-                                    TeleportService:TeleportToPlaceInstance(s.PlaceId, s.JobId, game.Players.LocalPlayer)
-                                    found = true
-                                    getgenv().SeaKinghop = false
-                                    break
+                                    print("🚀 ĐANG HOP...")
+                                    
+                                    -- Thử hop
+                                    local hopSuccess, hopErr = pcall(function()
+                                        TeleportService:TeleportToPlaceInstance(s.PlaceId, s.JobId, game.Players.LocalPlayer)
+                                    end)
+                                    
+                                    if hopSuccess then
+                                        print("✅ HOP THÀNH CÔNG!")
+                                        found = true
+                                        getgenv().SeaKinghop = false
+                                        break
+                                    else
+                                        -- Hop thất bại (server full)
+                                        print("⚠️ HOP THẤT BẠI (có thể server full), thử server khác...")
+                                        triedServers[s.JobId] = true
+                                        th.New("Server full, tìm server khác...", 2)
+                                    end
                                 end
                             end
                         end
