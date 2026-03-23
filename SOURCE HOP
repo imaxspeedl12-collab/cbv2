@@ -571,12 +571,54 @@ sTab:AddToggle({
         if value then
             spawn(function()
                 local lastBeli = game.Players.LocalPlayer:FindFirstChild("PlayerStats") and game.Players.LocalPlayer.PlayerStats:FindFirstChild("beli") and game.Players.LocalPlayer.PlayerStats.beli.Value or 0
-                local noRuangCount = 0
                 local triedServers = {}
+                local currentServerJobId = game.JobId
+                local currentPlaceId = game.PlaceId
+                local cachedCandidates = {}
+                
+                -- Quét server 1 lần
+                print("📡 Đang quét server...")
+                for page = 1, 100 do
+                    local success, servers = pcall(function()
+                        return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer({ page = page })
+                    end)
+                    if not success or not servers then break end
+                    
+                    for _, s in ipairs(servers) do
+                        if s.JobId and s.JobId ~= currentServerJobId and s.PlaceId == currentPlaceId and s.CreatedAt and s.PlayerCount then
+                            local uptime = os.time() - s.CreatedAt
+                            local h = math.floor(uptime / 3600)
+                            local m = math.floor((uptime % 3600) / 60)
+                            
+                            if (h == 4 and m >= 21 and m <= 30) or
+                               (h == 8 and m >= 52 and m <= 59) or (h == 9 and m <= 1) or
+                               (h == 0 and m >= 59 and m <= 67) or
+                               (h == 2 and m >= 7 and m <= 14) or
+                               (h == 3 and m >= 14 and m <= 21) or
+                               (h == 5 and m >= 31 and m <= 37) or
+                               (h == 13 and m >= 28 and m <= 35) or
+                               (h == 18 and m >= 10 and m <= 17) or
+                               (h == 7 and m >= 45 and m <= 52) or
+                               (h == 6 and m >= 38 and m <= 45) or
+                               (h == 10 and m >= 3 and m <= 9) or
+                               (h == 11 and m >= 11 and m <= 17) then
+                                
+                                if s.PlayerCount < 12 then
+                                    table.insert(cachedCandidates, {
+                                        JobId = s.JobId,
+                                        PlaceId = s.PlaceId,
+                                        players = s.PlayerCount,
+                                        h = h, m = m
+                                    })
+                                end
+                            end
+                        end
+                    end
+                    task.wait(0.02)
+                end
+                print("✅ Đã lưu " .. #cachedCandidates .. " server có boss")
                 
                 while getgenv().SeaKinghop do
-                    print("🔄 Auto Hop: đang kiểm tra...")
-                    
                     -- Kiểm tra boss
                     local seaKing = workspace.SeaMonster:FindFirstChild("SeaKing")
                     local hydra = workspace.SeaMonster:FindFirstChild("HydraSeaKing")
@@ -587,107 +629,28 @@ sTab:AddToggle({
                     
                     -- Còn boss thì không hop
                     if (seaKing and skHealth > 0) or (hydra and hydraHealth > 0) or (gs and gsHealth > 0) then
-                        print("   Còn boss, không hop")
-                        noRuangCount = 0
-                        task.wait(5)
+                        task.wait(2)
                     else
-                        -- Không còn boss, kiểm tra tiền
+                        -- Kiểm tra tiền
                         local currentBeli = game.Players.LocalPlayer:FindFirstChild("PlayerStats") and game.Players.LocalPlayer.PlayerStats:FindFirstChild("beli") and game.Players.LocalPlayer.PlayerStats.beli.Value or 0
                         
                         if currentBeli > lastBeli then
-                            print("   ✅ Đã nhặt rương! Tiền tăng")
+                            print("   ✅ Nhặt rương! Tiền: " .. lastBeli .. " → " .. currentBeli)
                             lastBeli = currentBeli
-                            noRuangCount = 0
-                            task.wait(5)
+                            task.wait(2)
                         else
-                            noRuangCount = noRuangCount + 1
-                            print("   ⏳ Không thấy tiền tăng (" .. noRuangCount .. "/2)")
+                            print("   🚀 KHÔNG THẤY TIỀN TĂNG → HOP NGAY!")
                             
-                            -- Chỉ cần 2 lần (10 giây) không thấy tiền tăng là hop
-                            if noRuangCount >= 2 then
-                                print("   🚀 HOP SANG SERVER MỚI!")
-                                
-                                local MAX_PAGE = 200
-                                local currentJobId = game.JobId
-                                local currentPlaceId = game.PlaceId
-                                local page = 1
-                                local found = false
-                                local candidates = {}
-                                
-                                -- Quét tất cả server có boss
-                                while page <= MAX_PAGE do
-                                    local success, servers = pcall(function()
-                                        return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer({ page = page })
-                                    end)
-                                    if not success or not servers then break end
-                                    
-                                    for _, s in ipairs(servers) do
-                                        if s.JobId and s.JobId ~= currentJobId and s.PlaceId == currentPlaceId and s.CreatedAt and s.PlayerCount then
-                                            local uptime = os.time() - s.CreatedAt
-                                            local h = math.floor(uptime / 3600)
-                                            local m = math.floor((uptime % 3600) / 60)
-                                            
-                                            if (h == 4 and m >= 21 and m <= 30) or
-                                               (h == 8 and m >= 52 and m <= 59) or (h == 9 and m <= 1) or
-                                               (h == 0 and m >= 59 and m <= 67) or
-                                               (h == 2 and m >= 7 and m <= 14) or
-                                               (h == 3 and m >= 14 and m <= 21) or
-                                               (h == 5 and m >= 31 and m <= 37) or
-                                               (h == 13 and m >= 28 and m <= 35) or
-                                               (h == 18 and m >= 10 and m <= 17) or
-                                               (h == 7 and m >= 45 and m <= 52) or
-                                               (h == 6 and m >= 38 and m <= 45) or
-                                               (h == 10 and m >= 3 and m <= 9) or
-                                               (h == 11 and m >= 11 and m <= 17) then
-                                                
-                                                if s.PlayerCount < 12 and not triedServers[s.JobId] then
-                                                    table.insert(candidates, {
-                                                        JobId = s.JobId,
-                                                        PlaceId = s.PlaceId,
-                                                        players = s.PlayerCount,
-                                                        h = h, m = m
-                                                    })
-                                                end
-                                            end
-                                        end
-                                    end
-                                    page = page + 1
-                                    task.wait(0.03)
-                                end
-                                
-                                if #candidates > 0 then
-                                    table.sort(candidates, function(a, b) return a.players < b.players end)
-                                    
-                                    for _, c in ipairs(candidates) do
-                                        print(string.format("🎯 THỬ SERVER: %dh%02dm | %d/12", c.h, c.m, c.players))
-                                        local hopSuccess, hopErr = pcall(function()
-                                            TeleportService:TeleportToPlaceInstance(c.PlaceId, c.JobId, game.Players.LocalPlayer)
-                                        end)
-                                        if hopSuccess then
-                                            print("✅ HOP THÀNH CÔNG!")
-                                            found = true
-                                            break
-                                        else
-                                            print("⚠️ THẤT BẠI, thử server khác")
-                                            triedServers[c.JobId] = true
-                                        end
-                                    end
-                                end
-                                
-                                if not found then
-                                    print("❌ Không tìm thấy server, đợi 15 giây...")
-                                    for i = 1, 15 do
-                                        if not getgenv().SeaKinghop then break end
-                                        task.wait(1)
-                                    end
-                                end
-                                
-                                -- Reset để tiếp tục vòng lặp
-                                noRuangCount = 0
-                                lastBeli = game.Players.LocalPlayer:FindFirstChild("PlayerStats") and game.Players.LocalPlayer.PlayerStats:FindFirstChild("beli") and game.Players.LocalPlayer.PlayerStats.beli.Value or 0
-                                triedServers = {}
+                            if #cachedCandidates > 0 then
+                                table.sort(cachedCandidates, function(a, b) return a.players < b.players end)
+                                local target = cachedCandidates[1]
+                                print(string.format("🎯 HOP SANG: %dh%02dm | %d/12 người", target.h, target.m, target.players))
+                                TeleportService:TeleportToPlaceInstance(target.PlaceId, target.JobId, game.Players.LocalPlayer)
+                                getgenv().SeaKinghop = false
+                                break
                             else
-                                task.wait(5)
+                                print("❌ Không có server, đợi 10 giây...")
+                                task.wait(10)
                             end
                         end
                     end
@@ -696,7 +659,6 @@ sTab:AddToggle({
         end
     end
 })
-
 sTab:AddSlider({
     Name = "Thời gian Chờ GS+HD+SK (giây)",
     Min = 0,
