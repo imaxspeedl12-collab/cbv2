@@ -355,7 +355,7 @@ local function getBossRoot()
     return nil
 end
 
-sTab:AddToggle({
+sTab:({
     Name = "Auto Aim Skill HD+SK+GS",
     Default = Settings.autoskillsea,
     Callback = function(value)
@@ -455,7 +455,7 @@ sTab:AddToggle({
 
 getgenv().AutoSeaKing = false
 
-sTab:AddToggle({
+sTab:({
     Name = "Auto Teleport SK+HD+GS",
     Default = Settings.autoskhd,
     Callback = function(value)
@@ -560,7 +560,7 @@ local function removeOldestServer()
     end)
 end
 
--- ===== AUTO HOP MỚI (DỰA VÀO SỐ TIỀN TĂNG) =====
+-- ===== AUTO HOP MỚI (THỬ LẠI KHI FULL) =====
 sTab:AddToggle({
     Name = "Auto Hop Thông Minh | Beta (Sea King, Hydra)",
     Default = Settings.autoskhdhop,
@@ -573,6 +573,7 @@ sTab:AddToggle({
             spawn(function()
                 local lastBeli = game.Players.LocalPlayer:WaitForChild("PlayerStats"):WaitForChild("beli").Value
                 local noChangeCount = 0
+                local triedServers = {} -- Lưu server đã thử
                 
                 while getgenv().SeaKinghop do
                     print("🔄 Auto Hop: đang kiểm tra...")
@@ -607,14 +608,15 @@ sTab:AddToggle({
                             if noChangeCount >= 5 then
                                 print("   Không còn rương để nhặt, tìm server mới...")
                                 
-                                -- Tìm server có boss
                                 local MAX_PAGE = 200
                                 local currentJobId = game.JobId
                                 local currentPlaceId = game.PlaceId
                                 local page = 1
                                 local found = false
+                                local allCandidates = {} -- Lưu tất cả server có boss
                                 
-                                while page <= MAX_PAGE and not found do
+                                -- Quét tất cả server có boss
+                                while page <= MAX_PAGE do
                                     local success, servers = pcall(function()
                                         return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer({ page = page })
                                     end)
@@ -643,12 +645,14 @@ sTab:AddToggle({
                                                 isBossTime = true
                                             end
                                             
-                                            if isBossTime and players < 12 then
-                                                print(string.format("🎯 TÌM THẤY! %dh%02dm | %d/12 người", h, m, players))
-                                                TeleportService:TeleportToPlaceInstance(s.PlaceId, s.JobId, game.Players.LocalPlayer)
-                                                found = true
-                                                getgenv().SeaKinghop = false
-                                                break
+                                            if isBossTime and players < 12 and not triedServers[s.JobId] then
+                                                table.insert(allCandidates, {
+                                                    JobId = s.JobId,
+                                                    PlaceId = s.PlaceId,
+                                                    players = players,
+                                                    h = h,
+                                                    m = m
+                                                })
                                             end
                                         end
                                     end
@@ -656,9 +660,41 @@ sTab:AddToggle({
                                     task.wait(0.03)
                                 end
                                 
+                                if #allCandidates > 0 then
+                                    -- Sắp xếp theo số người ít nhất
+                                    table.sort(allCandidates, function(a, b)
+                                        return a.players < b.players
+                                    end)
+                                    
+                                    -- Thử từng server
+                                    for _, candidate in ipairs(allCandidates) do
+                                        print(string.format("🎯 THỬ SERVER: %dh%02dm | %d/12 người", candidate.h, candidate.m, candidate.players))
+                                        print("🚀 ĐANG HOP...")
+                                        
+                                        local hopSuccess, hopErr = pcall(function()
+                                            TeleportService:TeleportToPlaceInstance(candidate.PlaceId, candidate.JobId, game.Players.LocalPlayer)
+                                        end)
+                                        
+                                        if hopSuccess then
+                                            print("✅ HOP THÀNH CÔNG!")
+                                            found = true
+                                            break
+                                        else
+                                            print("⚠️ HOP THẤT BẠI (có thể full), thử server tiếp theo...")
+                                            triedServers[candidate.JobId] = true
+                                        end
+                                    end
+                                end
+                                
                                 if not found then
-                                    print("❌ Không tìm thấy server, đợi 30 giây...")
-                                    task.wait(30)
+                                    print("❌ Không tìm thấy server khả dụng, đợi 30 giây...")
+                                    for i = 30, 1, -1 do
+                                        if not getgenv().SeaKinghop then break end
+                                        task.wait(1)
+                                    end
+                                else
+                                    getgenv().SeaKinghop = false
+                                    break
                                 end
                                 noChangeCount = 0
                             else
@@ -671,19 +707,6 @@ sTab:AddToggle({
         end
     end
 })
-sTab:AddSlider({
-    Name = "Thời gian Chờ GS+HD+SK (giây)",
-    Min = 0,
-    Max = 300,
-    Default = Settings.HopThreshold,
-    Increment = 5,
-    ValueName = "giây",
-    Callback = function(value)
-        Settings.HopThreshold = value
-        SaveSettings()
-    end
-})
-
 local player = game:GetService("Players").LocalPlayer
 local replicatedStorage = game:GetService("ReplicatedStorage")
 local fruitStorage = replicatedStorage:FindFirstChild("Chest") and replicatedStorage.Chest:FindFirstChild("Fruits")
