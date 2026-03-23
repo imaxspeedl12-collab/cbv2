@@ -560,7 +560,7 @@ local function removeOldestServer()
     end)
 end
 
--- ===== AUTO HOP MỚI (THỬ LẠI KHI FULL) =====
+-- ===== AUTO HOP LIÊN TỤC (KIỂM TRA TIỀN) =====
 sTab:AddToggle({
     Name = "Auto Hop Thông Minh | Beta (Sea King, Hydra)",
     Default = Settings.autoskhdhop,
@@ -573,12 +573,12 @@ sTab:AddToggle({
             spawn(function()
                 local lastBeli = game.Players.LocalPlayer:WaitForChild("PlayerStats"):WaitForChild("beli").Value
                 local noChangeCount = 0
-                local triedServers = {} -- Lưu server đã thử
+                local triedServers = {}
                 
                 while getgenv().SeaKinghop do
                     print("🔄 Auto Hop: đang kiểm tra...")
                     
-                    -- Kiểm tra boss
+                    -- Kiểm tra boss còn không
                     local seaKing = workspace.SeaMonster:FindFirstChild("SeaKing")
                     local hydra = workspace.SeaMonster:FindFirstChild("HydraSeaKing")
                     local gs = workspace.GhostMonster:FindFirstChild("Ghost Ship")
@@ -596,27 +596,27 @@ sTab:AddToggle({
                         local currentBeli = game.Players.LocalPlayer:WaitForChild("PlayerStats"):WaitForChild("beli").Value
                         
                         if currentBeli > lastBeli then
-                            print("   Đã nhặt được rương, tiền tăng!")
+                            print("   ✅ Đã nhặt được rương! (Tiền: " .. lastBeli .. " → " .. currentBeli .. ")")
                             lastBeli = currentBeli
                             noChangeCount = 0
                             task.wait(5)
                         else
                             noChangeCount = noChangeCount + 1
-                            print(string.format("   Không nhặt được rương (%d/5), tiền không đổi", noChangeCount))
+                            print(string.format("   ⏳ Không nhặt được rương (%d/5), tiền không đổi", noChangeCount))
                             
                             -- Sau 5 lần kiểm tra (25 giây) không thấy tiền tăng → hop
                             if noChangeCount >= 5 then
-                                print("   Không còn rương để nhặt, tìm server mới...")
+                                print("   🚀 Không còn rương, bắt đầu tìm server mới...")
                                 
                                 local MAX_PAGE = 200
                                 local currentJobId = game.JobId
                                 local currentPlaceId = game.PlaceId
                                 local page = 1
                                 local found = false
-                                local allCandidates = {} -- Lưu tất cả server có boss
+                                local allCandidates = {}
                                 
                                 -- Quét tất cả server có boss
-                                while page <= MAX_PAGE do
+                                while page <= MAX_PAGE and not found do
                                     local success, servers = pcall(function()
                                         return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer({ page = page })
                                     end)
@@ -680,21 +680,23 @@ sTab:AddToggle({
                                             found = true
                                             break
                                         else
-                                            print("⚠️ HOP THẤT BẠI (có thể full), thử server tiếp theo...")
+                                            print("⚠️ HOP THẤT BẠI (server full), thử server tiếp theo...")
                                             triedServers[candidate.JobId] = true
                                         end
                                     end
                                 end
                                 
                                 if not found then
-                                    print("❌ Không tìm thấy server khả dụng, đợi 30 giây...")
-                                    for i = 30, 1, -1 do
+                                    print("❌ Không tìm thấy server khả dụng, đợi 30 giây rồi quét lại...")
+                                    for i = 1, 30 do
                                         if not getgenv().SeaKinghop then break end
                                         task.wait(1)
                                     end
                                 else
-                                    getgenv().SeaKinghop = false
-                                    break
+                                    -- Đã hop thành công, reset các biến
+                                    triedServers = {}
+                                    lastBeli = game.Players.LocalPlayer:WaitForChild("PlayerStats"):WaitForChild("beli").Value
+                                    print("✅ Đã vào server mới, tiếp tục vòng lặp...")
                                 end
                                 noChangeCount = 0
                             else
