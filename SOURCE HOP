@@ -560,9 +560,9 @@ local function removeOldestServer()
     end)
 end
 
--- ===== AUTO HOP (CHỈ CHECK GEM KHI CÓ BOSS/RƯƠNG) =====
+-- ===== AUTO HOP LIÊN TỤC (KHÔNG DỪNG) =====
 sTab:AddToggle({
-    Name = "Auto Hop Thông Minh | Beta",
+    Name = "Auto Hop Thông Minh | Beta (Sea King, Hydra)",
     Default = Settings.autoskhdhop,
     Callback = function(value)
         getgenv().SeaKinghop = value
@@ -571,13 +571,10 @@ sTab:AddToggle({
         
         if value then
             spawn(function()
-                local lastGem = game.Players.LocalPlayer:FindFirstChild("PlayerStats") and game.Players.LocalPlayer.PlayerStats:FindFirstChild("Gem") and game.Players.LocalPlayer.PlayerStats.Gem.Value or 0
-                local noGemChangeCount = 0
-                local triedServers = {}
-                local hasBossOrChest = false
+                local triedServers = {} -- Lưu server đã thử trong lần quét hiện tại
                 
                 while getgenv().SeaKinghop do
-                    print("🔄 Auto Hop: đang kiểm tra...")
+                    print("🔄 Auto Hop: đang kiểm tra boss và rương...")
                     
                     -- Kiểm tra boss
                     local seaKing = workspace.SeaMonster:FindFirstChild("SeaKing")
@@ -587,7 +584,7 @@ sTab:AddToggle({
                     local hydraHealth = hydra and hydra:FindFirstChild("Humanoid") and hydra.Humanoid.Health or 0
                     local gsHealth = gs and gs:FindFirstChild("Humanoid") and gs.Humanoid.Health or 0
                     
-                    -- Kiểm tra rương Hydra
+                    -- ===== KIỂM TRA RƯƠNG HYDRA =====
                     local hasHydraChest = false
                     local workspaceIsland = workspace:FindFirstChild("Island")
                     if workspaceIsland then
@@ -605,7 +602,7 @@ sTab:AddToggle({
                         end
                     end
                     
-                    -- Kiểm tra rương Sea King
+                    -- ===== KIỂM TRA RƯƠNG SEA KING =====
                     local hasSeaKingChest = false
                     if workspaceIsland then
                         for _, islandName in ipairs({"Legacy Island1", "Legacy Island2", "Legacy Island3", "Legacy Island4"}) do
@@ -622,7 +619,7 @@ sTab:AddToggle({
                         end
                     end
                     
-                    -- Kiểm tra rương Ghost Ship
+                    -- ===== KIỂM TRA RƯƠNG GHOST SHIP =====
                     local hasGhostShipChest = false
                     for i = 1, 5 do
                         if workspace:FindFirstChild("Chest" .. i) then
@@ -631,38 +628,15 @@ sTab:AddToggle({
                         end
                     end
                     
-                    -- Xác định có boss hoặc rương không
-                    local hasBoss = (seaKing and skHealth > 0) or (hydra and hydraHealth > 0) or (gs and gsHealth > 0)
-                    local hasChest = hasHydraChest or hasSeaKingChest or hasGhostShipChest
-                    hasBossOrChest = hasBoss or hasChest
-                    
-                    -- Nếu có boss hoặc rương → kiểm tra Gem
-                    if hasBossOrChest then
-                        local currentGem = game.Players.LocalPlayer:FindFirstChild("PlayerStats") and game.Players.LocalPlayer.PlayerStats:FindFirstChild("Gem") and game.Players.LocalPlayer.PlayerStats.Gem.Value or 0
-                        
-                        if currentGem > lastGem then
-                            print("   ✅ Đã nhặt rương! Gem: " .. lastGem .. " → " .. currentGem)
-                            lastGem = currentGem
-                            noGemChangeCount = 0
-                            task.wait(3)
-                        else
-                            noGemChangeCount = noGemChangeCount + 1
-                            print("   ⏳ Có boss/rương nhưng Gem không tăng (" .. noGemChangeCount .. "/3)")
-                            
-                            -- Sau 3 lần (9 giây) không thấy Gem tăng → có thể boss đã chết hoặc rương đã nhặt
-                            if noGemChangeCount >= 3 then
-                                print("   ⚠️ 3 lần không thấy Gem tăng, kiểm tra lại boss/rương...")
-                                -- Reset bộ đếm để kiểm tra lại
-                                noGemChangeCount = 0
-                                lastGem = currentGem
-                                task.wait(3)
-                            else
-                                task.wait(3)
-                            end
-                        end
+                    -- Nếu còn boss hoặc còn rương → không hop
+                    if (seaKing and skHealth > 0) or (hydra and hydraHealth > 0) or (gs and gsHealth > 0) then
+                        print("   Còn boss, không hop")
+                        task.wait(5)
+                    elseif hasHydraChest or hasSeaKingChest or hasGhostShipChest then
+                        print("   Còn rương, đợi nhặt...")
+                        task.wait(5)
                     else
-                        -- KHÔNG có boss và không có rương → hop ngay
-                        print("   🚀 KHÔNG CÓ BOSS VÀ RƯƠNG, HOP NGAY!")
+                        print("   🚀 KHÔNG CÒN BOSS VÀ RƯƠNG, TÌM SERVER MỚI!")
                         
                         local MAX_PAGE = 200
                         local currentJobId = game.JobId
@@ -671,6 +645,7 @@ sTab:AddToggle({
                         local found = false
                         local candidates = {}
                         
+                        -- Quét tất cả server có boss
                         while page <= MAX_PAGE do
                             local success, servers = pcall(function()
                                 return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer({ page = page })
@@ -712,35 +687,42 @@ sTab:AddToggle({
                         end
                         
                         if #candidates > 0 then
+                            -- Sắp xếp theo số người ít nhất
                             table.sort(candidates, function(a, b) return a.players < b.players end)
                             
+                            -- Thử từng server
                             for _, c in ipairs(candidates) do
-                                print(string.format("🎯 THỬ SERVER: %dh%02dm | %d/12", c.h, c.m, c.players))
+                                print(string.format("🎯 THỬ SERVER: %dh%02dm | %d/12 người", c.h, c.m, c.players))
+                                
                                 local hopSuccess, hopErr = pcall(function()
                                     TeleportService:TeleportToPlaceInstance(c.PlaceId, c.JobId, game.Players.LocalPlayer)
                                 end)
+                                
                                 if hopSuccess then
                                     print("✅ HOP THÀNH CÔNG!")
                                     found = true
                                     break
                                 else
-                                    print("⚠️ THẤT BẠI, thử server khác")
+                                    print("⚠️ HOP THẤT BẠI (có thể full), thử server tiếp theo...")
                                     triedServers[c.JobId] = true
                                 end
                             end
                         end
                         
                         if not found then
-                            print("❌ Không tìm thấy server, đợi 30 giây...")
+                            print("❌ Không tìm thấy server khả dụng, đợi 30 giây...")
                             for i = 1, 30 do
                                 if not getgenv().SeaKinghop then break end
                                 task.wait(1)
                             end
+                            -- Xóa triedServers để thử lại các server cũ sau 30 giây
+                            triedServers = {}
+                        else
+                            -- Hop thành công, reset triedServers để tiếp tục vòng lặp sau
+                            triedServers = {}
+                            print("✅ ĐÃ HOP, TIẾP TỤC VÒNG LẶP...")
+                            -- KHÔNG TẮT toggle, tiếp tục vòng lặp
                         end
-                        
-                        -- Reset sau khi hop
-                        noGemChangeCount = 0
-                        lastGem = game.Players.LocalPlayer:FindFirstChild("PlayerStats") and game.Players.LocalPlayer.PlayerStats:FindFirstChild("Gem") and game.Players.LocalPlayer.PlayerStats.Gem.Value or 0
                     end
                 end
             end)
