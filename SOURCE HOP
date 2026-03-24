@@ -742,6 +742,19 @@ sTab:AddToggle({
     end
 })
 
+sTab:AddSlider({
+    Name = "Thời gian Chờ GS+HD+SK (giây)",
+    Min = 0,
+    Max = 300,
+    Default = Settings.HopThreshold,
+    Increment = 5,
+    ValueName = "giây",
+    Callback = function(value)
+        Settings.HopThreshold = value
+        SaveSettings()
+    end
+})
+
 sTab:AddToggle({
     Name = "Auto Cất Fruit",
     Default = Settings.autocat,
