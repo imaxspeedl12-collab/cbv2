@@ -660,26 +660,23 @@ sTab:AddToggle({
                             continue
                         end
                     else
-                        -- ===== SPAM HOP LIÊN TỤC, QUÉT VÒNG QUANH 200 PAGE =====
-                        print("   🔁 Không còn boss/rương, bắt đầu spam hop...")
+                        -- ===== QUÉT VÔ HẠN PAGE ĐẾN HẾT SERVER =====
+                        print("   🔁 Không còn boss/rương, bắt đầu quét toàn bộ server...")
                         
                         local currentPlaceId = game.PlaceId
                         local currentJobId = game.JobId
-                        local MAX_PAGES = 200  -- Số page tối đa
                         local page = 1
                         local hopAttempts = 0
-                        local scanRound = 1
+                        local emptyPageCount = 0  -- Đếm số page trống liên tiếp
+                        local totalServersScanned = 0
+                        local maxEmptyPages = 5   -- Nếu 5 page liên tiếp không có server thì dừng
                         
-                        -- Vòng lặp spam hop vô hạn
                         while getgenv().SeaKinghop do
                             hopAttempts = hopAttempts + 1
                             
-                            if page == 1 then
-                                print(string.format("   📍 [VÒNG %d] Bắt đầu quét 200 page...", scanRound))
-                            end
-                            
+                            -- In tiến độ mỗi 50 page
                             if page % 50 == 0 then
-                                print(string.format("   📊 Đã quét %d/%d page (vòng %d)", page, MAX_PAGES, scanRound))
+                                print(string.format("   📊 Đang quét page %d | Tổng server đã quét: %d", page, totalServersScanned))
                             end
                             
                             local success, servers = pcall(function()
@@ -687,74 +684,78 @@ sTab:AddToggle({
                             end)
                             
                             if not success or not servers then
-                                print(string.format("   ⚠️ Không lấy được server page %d, chuyển sang page tiếp theo", page))
+                                print(string.format("   ⚠️ Không lấy được server page %d", page))
+                                emptyPageCount = emptyPageCount + 1
                                 page = page + 1
-                                if page > MAX_PAGES then
+                                task.wait(0.2)
+                                
+                                -- Nếu quá nhiều page lỗi liên tiếp thì reset page
+                                if emptyPageCount >= maxEmptyPages then
+                                    print("   🔄 Quá nhiều page lỗi, quay lại page 1...")
                                     page = 1
-                                    scanRound = scanRound + 1
-                                    print(string.format("   🔄 ĐÃ QUÉT HẾT %d PAGE! BẮT ĐẦU VÒNG %d...", MAX_PAGES, scanRound))
-                                    task.wait(1)
+                                    emptyPageCount = 0
                                 end
-                                task.wait(0.1)
                                 continue
                             end
                             
-                            local foundInPage = false
+                            local serverCount = #servers
+                            totalServersScanned = totalServersScanned + serverCount
                             
-                            for _, s in ipairs(servers) do
-                                if not getgenv().SeaKinghop then break end
+                            -- Nếu page không có server nào
+                            if serverCount == 0 then
+                                emptyPageCount = emptyPageCount + 1
+                                print(string.format("   📭 Page %d: 0 server (đã %d page trống)", page, emptyPageCount))
                                 
-                                if s.JobId and s.JobId ~= currentJobId and s.PlaceId == currentPlaceId and s.CreatedAt and s.PlayerCount then
-                                    local uptime = os.time() - s.CreatedAt
-                                    local h = math.floor(uptime / 3600)
-                                    local m = math.floor((uptime % 3600) / 60)
+                                -- Nếu 10 page liên tiếp không có server → có thể đã hết server
+                                if emptyPageCount >= 10 then
+                                    print("   🔄 ĐÃ QUÉT HẾT SERVER! Quay lại page 1 để quét vòng mới...")
+                                    page = 1
+                                    emptyPageCount = 0
+                                    totalServersScanned = 0
+                                    task.wait(2)
+                                end
+                            else
+                                emptyPageCount = 0
+                                
+                                -- Duyệt server trong page
+                                for _, s in ipairs(servers) do
+                                    if not getgenv().SeaKinghop then break end
                                     
-                                    -- Kiểm tra khung giờ boss
-                                    local isBossTime = false
-                                    if (h == 4 and m >= 21 and m <= 30) or
-                                       (h == 8 and m >= 52 and m <= 59) or (h == 9 and m <= 1) or
-                                       (h == 0 and m >= 59 and m <= 67) or
-                                       (h == 2 and m >= 7 and m <= 14) or
-                                       (h == 3 and m >= 14 and m <= 21) or
-                                       (h == 5 and m >= 31 and m <= 37) or
-                                       (h == 13 and m >= 28 and m <= 35) or
-                                       (h == 18 and m >= 10 and m <= 17) or
-                                       (h == 7 and m >= 45 and m <= 52) or
-                                       (h == 6 and m >= 38 and m <= 45) or
-                                       (h == 10 and m >= 3 and m <= 9) or
-                                       (h == 11 and m >= 11 and m <= 17) then
-                                        isBossTime = true
-                                    end
-                                    
-                                    if isBossTime and s.PlayerCount < 12 then
-                                        foundInPage = true
-                                        print(string.format("🎯 [LẦN %d - PAGE %d] TÌM THẤY! %dh%02dm | %d/12 người", hopAttempts, page, h, m, s.PlayerCount))
-                                        print("🚀 ĐANG HOP...")
+                                    if s.JobId and s.JobId ~= currentJobId and s.PlaceId == currentPlaceId and s.CreatedAt and s.PlayerCount then
+                                        local uptime = os.time() - s.CreatedAt
+                                        local h = math.floor(uptime / 3600)
+                                        local m = math.floor((uptime % 3600) / 60)
                                         
-                                        -- Hop ngay lập tức
-                                        TeleportService:TeleportToPlaceInstance(s.PlaceId, s.JobId, game.Players.LocalPlayer)
+                                        -- Kiểm tra khung giờ boss
+                                        local isBossTime = false
+                                        if (h == 4 and m >= 21 and m <= 30) or
+                                           (h == 8 and m >= 52 and m <= 59) or (h == 9 and m <= 1) or
+                                           (h == 0 and m >= 59 and m <= 67) or
+                                           (h == 2 and m >= 7 and m <= 14) or
+                                           (h == 3 and m >= 14 and m <= 21) or
+                                           (h == 5 and m >= 31 and m <= 37) or
+                                           (h == 13 and m >= 28 and m <= 35) or
+                                           (h == 18 and m >= 10 and m <= 17) or
+                                           (h == 7 and m >= 45 and m <= 52) or
+                                           (h == 6 and m >= 38 and m <= 45) or
+                                           (h == 10 and m >= 3 and m <= 9) or
+                                           (h == 11 and m >= 11 and m <= 17) then
+                                            isBossTime = true
+                                        end
                                         
-                                        -- Đợi 5 giây để Roblox xử lý hop
-                                        -- Nếu hop thành công, game sẽ chuyển server và code dừng
-                                        -- Nếu hop thất bại (server full), tiếp tục spam
-                                        task.wait(5)
-                                        break
+                                        if isBossTime and s.PlayerCount < 12 then
+                                            print(string.format("🎯 TÌM THẤY! Page %d | %dh%02dm | %d/12 người", page, h, m, s.PlayerCount))
+                                            print("🚀 ĐANG HOP...")
+                                            
+                                            TeleportService:TeleportToPlaceInstance(s.PlaceId, s.JobId, game.Players.LocalPlayer)
+                                            task.wait(3)
+                                        end
                                     end
                                 end
                             end
                             
-                            -- Chuyển sang page tiếp theo
                             page = page + 1
-                            
-                            -- Nếu quét hết 200 page thì quay lại page 1
-                            if page > MAX_PAGES then
-                                page = 1
-                                scanRound = scanRound + 1
-                                print(string.format("   🔄 ĐÃ QUÉT HẾT %d PAGE! BẮT ĐẦU VÒNG %d...", MAX_PAGES, scanRound))
-                                task.wait(1) -- Nghỉ 1 giây giữa các vòng
-                            end
-                            
-                            task.wait(0.1) -- Delay nhẹ
+                            task.wait(0.05)
                         end
                     end
                 end
