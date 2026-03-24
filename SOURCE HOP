@@ -648,7 +648,8 @@ sTab:AddToggle({
             local startGem = game.Players.LocalPlayer.PlayerStats.Gem.Value
             local startBeli = game.Players.LocalPlayer.PlayerStats.beli.Value
             print("📊 Gem ban đầu: " .. startGem)
-            print("📊 Beli ban đầu: " .. startBeli)
+            
+            local hasKilledBoss = false  -- Đánh dấu đã đánh boss chưa
             
             spawn(function()
                 while getgenv().SeaKinghop do
@@ -702,16 +703,15 @@ sTab:AddToggle({
                     
                     local hasBoss = (seaKing and skHealth > 0) or (hydra and hydraHealth > 0) or (gs and gsHealth > 0)
                     
-                    -- ===== QUYẾT ĐỊNH HOP =====
-                    
-                    -- 1. Nếu còn boss → không hop
+                    -- ===== NẾU CÓ BOSS, ĐÁNH DẤU =====
                     if hasBoss then
-                        print("⚔️ Còn boss, không hop")
+                        hasKilledBoss = true
+                        print("⚔️ Đang có boss...")
                         task.wait(5)
                         continue
                     end
                     
-                    -- 2. Nếu boss sắp spawn → không hop
+                    -- ===== NẾU BOSS SẮP SPAWN =====
                     if skSpawnTime < Settings.HopThreshold then
                         print(string.format("🌊 Boss spawn sau %d giây", skSpawnTime))
                         task.wait(5)
@@ -724,26 +724,31 @@ sTab:AddToggle({
                         continue
                     end
                     
-                    -- 3. KIỂM TRA GEM TĂNG (ĐÃ NHẶT RƯƠNG)
-                    local currentGem = PlayerStats.Gem.Value
-                    local currentBeli = PlayerStats.beli.Value
-                    
-                    if currentGem > startGem or currentBeli > startBeli then
-                        print(string.format("✅ Đã nhặt rương! Gem: %d → %d", startGem, currentGem))
-                        print("🎯 Tiến hành hop...")
+                    -- ===== SAU KHI BOSS CHẾT, KIỂM TRA GEM =====
+                    if hasKilledBoss then
+                        local currentGem = PlayerStats.Gem.Value
+                        local currentBeli = PlayerStats.beli.Value
+                        
+                        if currentGem > startGem or currentBeli > startBeli then
+                            print(string.format("✅ Đã nhặt rương! Gem: %d → %d", startGem, currentGem))
+                            print("🎯 Tiến hành hop...")
+                            spamTeleport()
+                            break
+                        else
+                            print("📦 Boss chết nhưng chưa thấy rương, đợi 3 giây...")
+                            task.wait(3)
+                        end
+                    else
+                        -- Nếu chưa thấy boss nào (server mới) → hop ngay
+                        print("🔁 Server không có boss, tìm server mới...")
                         spamTeleport()
                         break
-                    else
-                        -- Chưa nhặt rương, đợi thêm
-                        print("📦 Chưa thấy rương, đợi 3 giây...")
-                        task.wait(3)
                     end
                 end
             end)
         end
     end
 })
-
 sTab:AddSlider({
     Name = "Thời gian Chờ GS+HD+SK (giây)",
     Min = 0,
