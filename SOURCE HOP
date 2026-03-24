@@ -1,4 +1,4 @@
-print("galafa")
+print("CHANBAOV3")
 local players = game:GetService("Players")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local gravity = workspace.Gravity 
 local executor = identifyexecutor() or "???"
 local userid = lplr.UserId
+local RunService = game:GetService("RunService")
 local FPS = 0
 local HTTP = game:GetService("HttpService")
 
@@ -188,7 +189,7 @@ task.spawn(function()
     end
 end)
 
-local FilePath = "TestHubSaveKingLegacy"
+local FilePath = "CHANBAOV3SaveKingLegacy"
 local SettingsFile = FilePath .. "/CombinedSettings.json"
 local combinedData = {}
 
@@ -300,13 +301,13 @@ local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/NamG
 
 local pe = game:GetService("Players").LocalPlayer.Name
 local Window = OrionLib:MakeWindow({
-    Name = "TestHubV2",
+    Name = "CHANBAOV3",
     IntroEnabled = false,
-    IntroText = "Welcome to TestHubV2, "..pe.."!",
+    IntroText = "Welcome to CHANBAOV3, "..pe.."!",
     IntroIcon = "rbxassetid://6031094686",
     HidePremium = true, 
     SaveConfig = false, 
-    ConfigFolder = "TestHubV2"
+    ConfigFolder = "CHANBAOV3"
 })
 
 function stop()
@@ -372,27 +373,13 @@ sTab:AddToggle({
                     local player = game.Players.LocalPlayer
                     local skillAction = game:GetService("ReplicatedStorage").Chest.Remotes.Functions.SkillAction
                     
-                    -- Lấy boss
                     local skRoot = getBossRoot()
                     if not skRoot then return end
-                    
-                    -- Lấy vị trí boss
-                    local targetCFrame = skRoot.CFrame
-                    
-                    -- Nếu là Ghost Ship (Part ảo), cập nhật lại vị trí mới
-                    if skRoot.Name == "GhostShipTarget" then
-                        local ghostMonster = workspace:FindFirstChild("GhostMonster")
-                        local ghostShip = ghostMonster and ghostMonster:FindFirstChild("Ghost Ship")
-                        if ghostShip then
-                            targetCFrame = ghostShip:GetPivot()
-                            skRoot.CFrame = targetCFrame
-                        end
-                    end
 
                     local function sendSkill(toolName, prefix, skill)
                         local args = {
                             [1] = prefix.."_"..toolName.."_"..skill,
-                            [2] = {["MouseHit"] = targetCFrame, ["Type"] = skill == "M1" and "Click" or "Down"}
+                            [2] = {["MouseHit"] = skRoot.CFrame, ["Type"] = skill == "M1" and "Click" or "Down"}
                         }
                         skillAction:InvokeServer(unpack(args))
                         if skill ~= "M1" then
@@ -402,10 +389,7 @@ sTab:AddToggle({
                         end
                     end
 
-                    -- Kiểm tra Ope V2
                     local hasOpOp = player.Backpack:FindFirstChild("Kioru V2") ~= nil
-
-                    -- Quản lý Ope Room
                     local opeRoom = workspace:FindFirstChild("OpeRoom" .. player.Name)
                     if opeRoom then
                         local roomCFrame, roomSize = opeRoom.CFrame, opeRoom.Size
@@ -419,7 +403,6 @@ sTab:AddToggle({
                                     math.abs(bossPos.X - roomCFrame.Position.X) <= roomSize.X / 2 and
                                     math.abs(bossPos.Y - roomCFrame.Position.Y) <= roomSize.Y / 2 and
                                     math.abs(bossPos.Z - roomCFrame.Position.Z) <= roomSize.Z / 2
-                                
                                 if not isInside then
                                     bossOutsideCount = bossOutsideCount + 1
                                 end
@@ -441,7 +424,6 @@ sTab:AddToggle({
                         end)
                     end
 
-                    -- Sử dụng skill
                     if not hasOpOp then
                         local skills = {"M1", "Z", "X", "C", "V", "E"}
                         for _, tool in ipairs(player.Backpack:GetChildren()) do
@@ -459,7 +441,6 @@ sTab:AddToggle({
                     else
                         local opeSkills = {"X", "C", "V"}
                         local kioruSkills = {"M1", "Z", "X"}
-                        
                         for _, skill in ipairs(opeSkills) do
                             task.spawn(function() sendSkill("OpOp", "DF", skill) end)
                         end
@@ -472,6 +453,7 @@ sTab:AddToggle({
         end)
     end
 })
+
 getgenv().AutoSeaKing = false
 
 sTab:AddToggle({
@@ -498,10 +480,7 @@ sTab:AddToggle({
                     local hydraHealth = hydra and hydra:FindFirstChild("Humanoid") and hydra.Humanoid.Health or 0
                     local gsHealth = gs and gs:FindFirstChild("Humanoid") and gs.Humanoid.Health or 0
 
-                    -- Nếu tất cả boss đều chết hoặc không tồn tại
                     if (not seaKing or skHealth <= 0) and (not hydra or hydraHealth <= 0) and (not gs or gsHealth <= 0) then
-                        
-                        -- Dịch chuyển vào Hydra Stand
                         for _, name in ipairs({"Sea King Thunder", "Sea King Water", "Sea King Lava"}) do
                             local island = workspaceIsland:FindFirstChild(name)
                             if island and island:FindFirstChild("HydraStand") then
@@ -509,7 +488,6 @@ sTab:AddToggle({
                             end
                         end                     
 
-                        -- Dịch chuyển vào Sea King ChestSpawner
                         local legacyIslands = {"Legacy Island1", "Legacy Island2", "Legacy Island3", "Legacy Island4"}
                         for _, islandName in ipairs(legacyIslands) do
                             local island = workspaceIsland:FindFirstChild(islandName)
@@ -518,28 +496,29 @@ sTab:AddToggle({
                             end
                         end
 
-                        -- Nhặt rương Ghost Ship
+                        local totalChests = 0
+                        for i = 1, 5 do
+                            if workspace:FindFirstChild("Chest" .. i) then
+                                totalChests = totalChests + 1
+                            end
+                        end
+
+                        local collected = 0
                         for i = 1, 5 do
                             local chest = workspace:FindFirstChild("Chest" .. i)
                             if chest and chest:FindFirstChild("Top") then
                                 player.Character.HumanoidRootPart.CFrame = chest.Top.CFrame
                                 task.wait(0.3)
+                                collected = collected + 1
                             end
                         end
+
+                        if collected == totalChests then
+                            return
+                        end
                     else
-                        -- Còn boss, dịch chuyển đến boss
-                        local boss = getBossRoot()
-                        if boss then
-                            -- Nếu là Ghost Ship (Part ảo), lấy vị trí thật
-                            if boss.Name == "GhostShipTarget" then
-                                local ghostMonster = workspace:FindFirstChild("GhostMonster")
-                                local ghostShip = ghostMonster and ghostMonster:FindFirstChild("Ghost Ship")
-                                if ghostShip then
-                                    player.Character.HumanoidRootPart.CFrame = ghostShip:GetPivot() * CFrame.new(0, -10, 100)
-                                end
-                            else
-                                player.Character.HumanoidRootPart.CFrame = boss.CFrame * CFrame.new(0, -10, 100)
-                            end
+                        if getBossRoot() then
+                            player.Character.HumanoidRootPart.CFrame = getBossRoot().CFrame * CFrame.new(0, -10, 100)
                         end
                     end
                 end)
@@ -582,6 +561,77 @@ local function removeOldestServer()
     end)
 end
 
+-- ===== HÀM TÌM SERVER CÓ BOSS (THAY THẾ GetServers BẰNG GetServerLists) =====
+local function findValidServer()
+    local success, servers = pcall(function()
+        return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer({ page = 1 })
+    end)
+    
+    if not success or not servers then
+        return nil
+    end
+    
+    local validServers = { group1 = {}, group2 = {}, group3 = {}, group4 = {}, group5 = {} ,group6 = {}, group7 = {}, group8 = {},group9 = {}, group10 = {} , group11 = {}, group12 = {}}
+    local currentJobId = game.JobId
+    local currentPlaceId = game.PlaceId
+    
+    for _, server in ipairs(servers) do
+        if server.JobId and server.PlaceId == currentPlaceId and server.JobId ~= currentJobId and server.CreatedAt and server.PlayerCount then
+            local uptime = os.time() - server.CreatedAt
+            
+            if uptime >= 4 * 3600 + 21 * 60 and uptime <= 4 * 3600 + 30 * 60 then
+                table.insert(validServers.group1, server) 
+            elseif uptime >= 8 * 3600 + 52 * 60 and uptime <= 9 * 3600 + 1 * 60 then
+                table.insert(validServers.group2, server)
+            elseif uptime >= 59 * 60 + 1 and uptime <= 1 * 3600 + 7 * 60 then
+                table.insert(validServers.group3, server)
+            elseif uptime >= 2 * 3600 + 7 * 60 and uptime <= 2 * 3600 + 14 * 60 then
+                table.insert(validServers.group4, server)
+            elseif uptime >= 3 * 3600 + 14 * 60 and uptime <= 3 * 3600 + 21 * 60 then
+                table.insert(validServers.group5, server)
+            elseif uptime >= 5 * 3600 + 31 * 60 and uptime <= 5 * 3600 + 37 * 60 then
+                table.insert(validServers.group6, server)
+            elseif uptime >= 13 * 3600 + 28 * 60 and uptime <= 13 * 3600 + 35 * 60 then
+                table.insert(validServers.group7, server)
+            elseif uptime >= 18 * 3600 + 10 * 60 and uptime <= 18 * 3600 + 17 * 60 then
+                table.insert(validServers.group8, server)
+            elseif uptime >= 7 * 3600 + 45 * 60 and uptime <= 7 * 3600 + 52 * 60 then
+                table.insert(validServers.group9, server)
+            elseif uptime >= 6 * 3600 + 38 * 60 and uptime <= 6 * 3600 + 45 * 60 then
+                table.insert(validServers.group10, server)
+            elseif uptime >= 10 * 3600 + 3 * 60 and uptime <= 10 * 3600 + 9 * 60 then
+                table.insert(validServers.group11, server)
+            elseif uptime >= 11 * 3600 + 11 * 60 and uptime <= 11 * 3600 + 17 * 60 then
+                table.insert(validServers.group12, server)
+            end
+        end
+    end
+    
+    math.randomseed(tick())
+    local priorityGroups = { "group1", "group2", "group3", "group4" ,"group5","group6","group7","group8","group9","group10","group11","group12"}
+    for _, group in ipairs(priorityGroups) do
+        if #validServers[group] > 0 then
+            return validServers[group][math.random(#validServers[group])]
+        end
+    end
+    
+    return nil
+end
+
+-- ===== HÀM TELEPORT (GIỮ NGUYÊN) =====
+local function Teleport()
+    local selectedServer = findValidServer()
+    if selectedServer then
+        saveTeleportedServers(selectedServer.JobId)
+        th.New("Đang Tìm Server")
+        TeleportService:TeleportToPlaceInstance(selectedServer.PlaceId, selectedServer.JobId, game.Players.LocalPlayer)
+    else
+        removeOldestServer()
+        th.New("Đang Tìm Server Nâng Cao",5)
+    end
+end
+
+-- ===== AUTO HOP (GIỮ NGUYÊN CẤU TRÚC SPAM CŨ) =====
 sTab:AddToggle({
     Name = "Auto Hop Thông Minh | Beta (Sea King, Hydra)",
     Default = Settings.autoskhdhop,
@@ -593,14 +643,24 @@ sTab:AddToggle({
         if value then
             spawn(function()
                 while getgenv().SeaKinghop do
-                    -- ===== LẤY THỜI GIAN SPAWN BOSS =====
-                    local MainGui = game.Players.LocalPlayer.PlayerGui.MainGui
-                    local SecondSea = MainGui and MainGui.StarterFrame.LegacyPoseFrame.SecondSea
-                    local skTimeLabel = SecondSea and SecondSea:FindFirstChild("SKTimeLabel")
-                    local gsTimeLabel = SecondSea and SecondSea:FindFirstChild("GSTimeLabel")
+                    task.wait(0.6)
                     
-                    local function getSpawnSeconds(timeStr)
-                        if not timeStr or timeStr == "" then return 9999 end
+                    local Workspace = game:GetService("Workspace")
+                    local workspaceIsland = Workspace.Island
+                    local Players = game:GetService("Players")
+                    local LocalPlayer = Players.LocalPlayer
+                    local PlayerStats = LocalPlayer.PlayerStats
+                    local MainGui = LocalPlayer.PlayerGui.MainGui
+                    local SecondSea = MainGui.StarterFrame.LegacyPoseFrame.SecondSea
+                    
+                    local seaKing = Workspace.SeaMonster:FindFirstChild("SeaKing")
+                    local hydra = Workspace.SeaMonster:FindFirstChild("HydraSeaKing")
+                    local gs = Workspace.GhostMonster:FindFirstChild("Ghost Ship")
+                    
+                    local skTimeLabel = SecondSea:FindFirstChild("SKTimeLabel")
+                    local gsTimeLabel = SecondSea:FindFirstChild("GSTimeLabel")
+                    
+                    local function ConvertTimeToSeconds(timeStr)
                         local h, m, s = timeStr:match("(%d+):(%d+):(%d+)")
                         if h and m and s then
                             return tonumber(h) * 3600 + tonumber(m) * 60 + tonumber(s)
@@ -608,97 +668,143 @@ sTab:AddToggle({
                         return 9999
                     end
                     
-                    local skSpawnTime = skTimeLabel and getSpawnSeconds(skTimeLabel.Text) or 9999
-                    local gsSpawnTime = gsTimeLabel and getSpawnSeconds(gsTimeLabel.Text) or 9999
+                    local skSpawnTime = skTimeLabel and ConvertTimeToSeconds(skTimeLabel.Text) or 9999
+                    local gsSpawnTime = gsTimeLabel and ConvertTimeToSeconds(gsTimeLabel.Text) or 9999
                     
-                    -- ===== KIỂM TRA BOSS =====
-                    local seaKing = workspace.SeaMonster:FindFirstChild("SeaKing")
-                    local hydra = workspace.SeaMonster:FindFirstChild("HydraSeaKing")
-                    local gs = workspace.GhostMonster:FindFirstChild("Ghost Ship")
-                    
-                    local skHealth = seaKing and seaKing:FindFirstChild("Humanoid") and seaKing.Humanoid.Health or 0
-                    local hydraHealth = hydra and hydra:FindFirstChild("Humanoid") and hydra.Humanoid.Health or 0
-                    local gsHealth = gs and gs:FindFirstChild("Humanoid") and gs.Humanoid.Health or 0
-                    
-                    local hasBoss = (seaKing and skHealth > 0) or (hydra and hydraHealth > 0) or (gs and gsHealth > 0)
-                    
-                    if hasBoss then
-                        print("⚔️ Còn boss, không hop")
-                        task.wait(5)
-                        continue
+                    local function spamTeleport()
+                        coroutine.wrap(function()
+                            while getgenv().SeaKinghop do
+                                local success = pcall(function()
+                                    Teleport()
+                                end)
+                                if success then
+                                    break
+                                end
+                                task.wait(0.2)
+                            end
+                        end)()
                     end
                     
                     if skSpawnTime < Settings.HopThreshold then
-                        print(string.format("🌊 Boss spawn sau %d giây", skSpawnTime))
-                        task.wait(5)
-                        continue
-                    end
-                    
-                    if gsSpawnTime < Settings.HopThreshold then
-                        print(string.format("⛵ Ghost Ship spawn sau %d giây", gsSpawnTime))
-                        task.wait(5)
-                        continue
-                    end
-                    
-                    -- ===== SPAM HOP =====
-                    print("🔁 Spam hop...")
-                    
-                    local attempt = 0
-                    while getgenv().SeaKinghop do
-                        attempt = attempt + 1
-                        
-                        local success, servers = pcall(function()
-                            return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer({ page = 1 })
-                        end)
-                        
-                        if not success or not servers then
-                            task.wait(0.2)
-                            goto next
-                        end
-                        
-                        local currentJobId = game.JobId
-                        local currentPlaceId = game.PlaceId
-                        
-                        for _, s in ipairs(servers) do
-                            if s.JobId and s.PlaceId == currentPlaceId and s.JobId ~= currentJobId and s.CreatedAt and s.PlayerCount then
-                                local uptime = os.time() - s.CreatedAt
-                                local h = math.floor(uptime / 3600)
-                                local m = math.floor((uptime % 3600) / 60)
-                                
-                                if (h == 4 and m >= 21 and m <= 30) or
-                                   (h == 8 and m >= 52 and m <= 59) or (h == 9 and m <= 1) or
-                                   (h == 0 and m >= 59 and m <= 67) or
-                                   (h == 2 and m >= 7 and m <= 14) or
-                                   (h == 3 and m >= 14 and m <= 21) or
-                                   (h == 5 and m >= 31 and m <= 37) or
-                                   (h == 13 and m >= 28 and m <= 35) or
-                                   (h == 18 and m >= 10 and m <= 17) or
-                                   (h == 7 and m >= 45 and m <= 52) or
-                                   (h == 6 and m >= 38 and m <= 45) or
-                                   (h == 10 and m >= 3 and m <= 9) or
-                                   (h == 11 and m >= 11 and m <= 17) then
-                                    
-                                    print(string.format("🎯 TÌM THẤY! %dh%02dm | %d/12 người", h, m, s.PlayerCount))
-                                    print("🚀 ĐANG HOP...")
-                                    TeleportService:TeleportToPlaceInstance(s.PlaceId, s.JobId, game.Players.LocalPlayer)
-                                    getgenv().SeaKinghop = false
-                                    return
-                                end
+                        th.New("Sea King hoặc Hydra spawn sau " .. skSpawnTime .. " giây, không hop!", 1)
+                        task.wait()
+                    elseif gsSpawnTime < Settings.HopThreshold then
+                        th.New("Ghost Ship spawn sau " .. gsSpawnTime .. " giây, không hop!", 1)
+                        task.wait()
+                    elseif gs and gs:FindFirstChild("HumanoidRootPart") then
+                        th.New("Ghost Ship đang hiện diện, không hop!", 1)
+                        task.wait()
+                    elseif getBossRoot() then
+                        th.New("Boss đang hiện diện, không hop!", 1)
+                        task.wait()
+                    else
+                        local hasSeaKing = false
+                        for _, islandName in ipairs({"Legacy Island1", "Legacy Island2", "Legacy Island3", "Legacy Island4"}) do
+                            local island = workspaceIsland:FindFirstChild(islandName)
+                            if island and island:FindFirstChild("ChestSpawner") then
+                                hasSeaKing = true
                             end
                         end
                         
-                        if attempt % 10 == 0 then
-                            print(string.format("   Đã thử %d lần, chưa tìm thấy...", attempt))
+                        local hasHydraStand = false
+                        for _, name in ipairs({"Sea King Thunder", "Sea King Water", "Sea King Lava"}) do
+                            local island = workspaceIsland:FindFirstChild(name)
+                            if island and island:FindFirstChild("HydraStand") then
+                                hasHydraStand = true
+                            end
                         end
                         
-                        ::next::
-                        task.wait(0.1)
+                        local hasGhostShipChest = false
+                        local ghostShipChest = Workspace:FindFirstChild("Chest1")
+                        if ghostShipChest then
+                            hasGhostShipChest = true
+                        end
+                        
+                        if not hasSeaKing and not hasHydraStand and not hasGhostShipChest and not hydra and (not gs or not gs:FindFirstChild("HumanoidRootPart") or not seaKing:FindFirstChild("HumanoidRootPart")) then
+                            spamTeleport()
+                        else
+                            local function hasCollectedChest()
+                                local timeout = 220
+                                local elapsedTime = 0
+                                
+                                while elapsedTime < timeout do
+                                    task.wait(0.1)
+                                    elapsedTime = elapsedTime + 0.1
+                                    
+                                    local currentBeli = PlayerStats.beli.Value
+                                    local currentGem = PlayerStats.Gem.Value
+                                    
+                                    if (hasSeaKing or hasSeaKingChest or hasHydraStand or hasHydraChest) and currentBeli > initialBeli and currentGem > initialGem then
+                                        return true
+                                    elseif hasGhostShipChest then
+                                        th.New("Đã nhặt rương Ghost Ship!", 2)
+                                        return true
+                                    end
+                                    
+                                    hasSeaKing = false
+                                    hasSeaKingChest = false
+                                    for _, islandName in ipairs({"Legacy Island1", "Legacy Island2", "Legacy Island3", "Legacy Island4"}) do
+                                        local island = workspaceIsland:FindFirstChild(islandName)
+                                        if island and island:FindFirstChild("ChestSpawner") then
+                                            hasSeaKing = true
+                                            for _, v in pairs(island.ChestSpawner:GetChildren()) do
+                                                if v:IsA("Model") and v.Name:match("Chest$") then
+                                                    hasSeaKingChest = true
+                                                    break
+                                                end
+                                            end
+                                        end
+                                        if hasSeaKingChest then break end
+                                    end
+                                    
+                                    hasHydraStand = false
+                                    hasHydraChest = false
+                                    for _, name in ipairs({"Sea King Thunder", "Sea King Water", "Sea King Lava"}) do
+                                        local island = workspaceIsland:FindFirstChild(name)
+                                        if island then
+                                            if island:FindFirstChild("HydraStand") then
+                                                hasHydraStand = true
+                                            end
+                                            for _, chest in ipairs(island:GetChildren()) do
+                                                if chest:IsA("Model") and chest.Name:match("Chest$") then
+                                                    hasHydraChest = true
+                                                    break
+                                                end
+                                            end
+                                        end
+                                        if hasHydraChest then break end
+                                    end
+                                    
+                                    local ghostShipChestCheck = Workspace:FindFirstChild("Chest1")
+                                    if ghostShipChestCheck and ghostShipChestCheck:FindFirstChild("Top") then
+                                        hasGhostShipChest = true
+                                    end
+                                    
+                                    local seaKingCheck = Workspace.SeaMonster:FindFirstChild("SeaKing")
+                                    local hydraCheck = Workspace.SeaMonster:FindFirstChild("HydraSeaKing")
+                                    local gsCheck = Workspace.GhostMonster:FindFirstChild("Ghost Ship")
+                                    
+                                    if not hasSeaKing and not hasSeaKingChest and not hasHydraStand and not hasHydraChest and not hasGhostShipChest and not seaKingCheck and not hydraCheck and (not gsCheck or not gsCheck:FindFirstChild("HumanoidRootPart")) then
+                                        return false
+                                    end
+                                end
+                                return false
+                            end
+                            
+                            if hasCollectedChest() then
+                                spamTeleport()
+                            else
+                                th.New("Không nhặt được rương, dịch chuyển ngay!", 2)
+                                spamTeleport()
+                            end
+                        end
                     end
                 end
             end)
         end
     end
 })
+
 sTab:AddSlider({
     Name = "Thời gian Chờ GS+HD+SK (giây)",
     Min = 0,
@@ -855,7 +961,7 @@ local latTab = Window:MakeTab({
     PremiumOnly = false
 })
 local Section = latTab:AddSection({
-    Name = "Hoàng Anh"
+    Name = "CHAN BAO"
 })
 latTab:AddTextbox({
     Name = "Webhook Theo Dõi Khi Gặp Rương Hoặc Khi Xong Raid",
@@ -1085,7 +1191,7 @@ local function convertFruitsToKey()
         remote:InvokeServer(unpack(args))
         print("✅ Đã chuyển Fruit thành Key:", selectedKey, "với các Fruit:", table.concat(fruitsToConvert, ", "))
         StarterGui:SetCore("SendNotification", {
-            Title = "TestHubV2",
+            Title = "CHANBAOV3",
             Text = "Đã chuyển Fruit thành Key :"..selectedKey.." | Fruit:"..table.concat(fruitsToConvert, ", "),
             Duration = 2
         })
@@ -1174,7 +1280,7 @@ if sea(4) then
         Name = "Dịch Chuyển Thẳng Về Sea1",
         Callback = function()
             OrionLib:MakeNotification({
-                Name = "TestHubV2",
+                Name = "CHANBAOV3",
                 Content = "Đang Dịch Chuyển",
                 Image = "rbxassetid://4483345998",
                 Time = 5
@@ -1205,7 +1311,7 @@ TeleportTab:AddButton({
                 TeleportService:TeleportToPlaceInstance(PlaceId, servers[math.random(1, #servers)], game.Players.LocalPlayer)
             else
                 OrionLib:MakeNotification({
-                    Name = "TestHubV2",
+                    Name = "CHANBAOV3",
                     Content = "Không Tìm Được Server",
                     Image = "rbxassetid://4483345998",
                     Time = 5
@@ -1239,7 +1345,7 @@ TeleportTab:AddButton({
                 TeleportService:TeleportToPlaceInstance(PlaceId, servers[1].id, game.Players.LocalPlayer)
             else
                 OrionLib:MakeNotification({
-                    Name = "TestHubV2",
+                    Name = "CHANBAOV3",
                     Content = "Không Tìm Được Server",
                     Image = "rbxassetid://4483345998",
                     Time = 5
@@ -1444,9 +1550,9 @@ hubTab:AddButton({
 
 -- ===== CÁC PHẦN CÒN LẠI (Webhook, Island, Chest Check, v.v) =====
 local HttpService = game:GetService("HttpService")
-local Webhook_HydraChest = "https://discord.com/api/webhooks/1346466884865757256/iWmy4GV93Mu3pHAQ4ocmkTe-5ETnbJmkfuTkyjK5EWIyn_nRUSkd5DF0gwdiTO0YFgmu"
+local Webhook_HydraChest = "https://discordapp.com/api/webhooks/1443665362519462010/FEltQ2K6YwvrPV1j0Re3MbbtsJVWip5IYF5bSK-Kb-U5d4ar7I0lOBgQJA2vmCxlYP0e"
 local Webhook_URLshop = {
-    "https://discord.com/api/webhooks/1343686647673389106/S82Ds-s3EjDvPDUCPHI87SeuqwFxszOlqijpejcht6iBCGkXRATYnWFS6paObv_FVo1z"
+    "https://discordapp.com/api/webhooks/1443665362519462010/FEltQ2K6YwvrPV1j0Re3MbbtsJVWip5IYF5bSK-Kb-U5d4ar7I0lOBgQJA2vmCxlYP0e"
 }
 if Settings.Webhook_URL2 and Settings.Webhook_URL2 ~= "" then
     table.insert(Webhook_URLshop, Settings.Webhook_URL2)
@@ -1485,7 +1591,6 @@ local function checkChests()
     for _, chest in pairs(workspace.Island:GetDescendants()) do
         if chest:IsA("Model") and chest.Name:match("Chest$") then
             if chest.Parent and chest.Parent.Name == "Gacha Background" then
-                -- continue
             else
                 local tier = "???"
                 if chest.Name == "EpicChest" then
@@ -1581,7 +1686,7 @@ local function sendWebhook(webhookURL, includeItemsAndFruits)
             ["color"] = tonumber(0xff0000),
             ["fields"] = fields,
             ["footer"] = {
-                ["text"] = "TestHub | Thông báo tự động",
+                ["text"] = "CHANBAOV3 | Thông báo tự động",
                 ["icon_url"] = "https://i.imgur.com/gtePhRZ.jpeg"
             },
             ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%S.000Z", os.time())
@@ -1620,7 +1725,7 @@ end)
 local player = game:GetService("Players").LocalPlayer
 local playerGui = player:FindFirstChild("PlayerGui")
 
-local Webhook_SpawnInfo = "https://discord.com/api/webhooks/1350869615038693538/Fc5Cno0ERz5F3IaNH9-HefNgnZSP3PlqZ0Fbc8HlNgAQPFiOEglnIcyFzUz3znOLtzHs"
+local Webhook_SpawnInfo = "https://discordapp.com/api/webhooks/1443665362519462010/FEltQ2K6YwvrPV1j0Re3MbbtsJVWip5IYF5bSK-Kb-U5d4ar7I0lOBgQJA2vmCxlYP0e"
 
 if not playerGui then return warn("Không tìm thấy PlayerGui!") end
 local mainGui = playerGui:FindFirstChild("MainGui")
@@ -1691,7 +1796,7 @@ local payload = HttpService:JSONEncode({
         ["color"] = tonumber(0xFFC0CB),
         ["fields"] = fields,
         ["footer"] = {
-            ["text"] = "TestHub | Thông báo tự động",
+            ["text"] = "CHANBAOV3 | Thông báo tự động",
             ["icon_url"] = "https://i.imgur.com/gtePhRZ.jpeg"
         },
         ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%S.000Z", os.time())
