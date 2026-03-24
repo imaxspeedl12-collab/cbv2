@@ -634,6 +634,12 @@ local function Teleport()
     end
 end
 
+-- Lưu gem gốc khi bật script
+local initialGem = game.Players.LocalPlayer.PlayerStats.Gem.Value
+local initialBeli = game.Players.LocalPlayer.PlayerStats.beli.Value
+print("📊 Đã lưu gem gốc: " .. initialGem)
+print("📊 Đã lưu beli gốc: " .. initialBeli)
+
 -- ===== AUTO HOP (GIỮ NGUYÊN CẤU TRÚC SPAM CŨ) =====
 sTab:AddToggle({
     Name = "Auto Hop Thông Minh | Beta (Sea King, Hydra)",
@@ -644,6 +650,11 @@ sTab:AddToggle({
         SaveSettings()
         
         if value then
+            -- Lưu gem/beli gốc khi bật toggle
+            local startGem = game.Players.LocalPlayer.PlayerStats.Gem.Value
+            local startBeli = game.Players.LocalPlayer.PlayerStats.beli.Value
+            local hasCollectedChest = false
+            
             spawn(function()
                 while getgenv().SeaKinghop do
                     task.wait(0.6)
@@ -674,134 +685,54 @@ sTab:AddToggle({
                     local skSpawnTime = skTimeLabel and ConvertTimeToSeconds(skTimeLabel.Text) or 9999
                     local gsSpawnTime = gsTimeLabel and ConvertTimeToSeconds(gsTimeLabel.Text) or 9999
                     
-                    local function spamTeleport()
-                        coroutine.wrap(function()
-                            while getgenv().SeaKinghop do
-                                local success = pcall(function()
-                                    Teleport()
-                                end)
-                                if success then
-                                    break
-                                end
-                                task.wait(0.2)
-                            end
-                        end)()
+                    -- ===== KIỂM TRA BOSS HIỆN TẠI =====
+                    local skHealth = seaKing and seaKing:FindFirstChild("Humanoid") and seaKing.Humanoid.Health or 0
+                    local hydraHealth = hydra and hydra:FindFirstChild("Humanoid") and hydra.Humanoid.Health or 0
+                    local gsHealth = gs and gs:FindFirstChild("Humanoid") and gs.Humanoid.Health or 0
+                    
+                    local hasBoss = (seaKing and skHealth > 0) or (hydra and hydraHealth > 0) or (gs and gsHealth > 0)
+                    
+                    -- ===== KIỂM TRA GEM/BELI TĂNG (ĐÃ NHẶT RƯƠNG) =====
+                    local currentGem = PlayerStats.Gem.Value
+                    local currentBeli = PlayerStats.beli.Value
+                    
+                    if not hasCollectedChest and (currentGem > startGem or currentBeli > startBeli) then
+                        hasCollectedChest = true
+                        print(string.format("✅ Đã nhặt được rương! (Gem: %d → %d)", startGem, currentGem))
+                        print(string.format("   Beli: %s → %s", startBeli, currentBeli))
                     end
                     
-                    if skSpawnTime < Settings.HopThreshold then
-                        th.New("Sea King hoặc Hydra spawn sau " .. skSpawnTime .. " giây, không hop!", 1)
-                        task.wait()
-                    elseif gsSpawnTime < Settings.HopThreshold then
-                        th.New("Ghost Ship spawn sau " .. gsSpawnTime .. " giây, không hop!", 1)
-                        task.wait()
-                    elseif gs and gs:FindFirstChild("HumanoidRootPart") then
-                        th.New("Ghost Ship đang hiện diện, không hop!", 1)
-                        task.wait()
-                    elseif getBossRoot() then
-                        th.New("Boss đang hiện diện, không hop!", 1)
-                        task.wait()
-                    else
-                        local hasSeaKing = false
-                        for _, islandName in ipairs({"Legacy Island1", "Legacy Island2", "Legacy Island3", "Legacy Island4"}) do
-                            local island = workspaceIsland:FindFirstChild(islandName)
-                            if island and island:FindFirstChild("ChestSpawner") then
-                                hasSeaKing = true
-                            end
-                        end
-                        
-                        local hasHydraStand = false
-                        for _, name in ipairs({"Sea King Thunder", "Sea King Water", "Sea King Lava"}) do
-                            local island = workspaceIsland:FindFirstChild(name)
-                            if island and island:FindFirstChild("HydraStand") then
-                                hasHydraStand = true
-                            end
-                        end
-                        
-                        local hasGhostShipChest = false
-                        local ghostShipChest = Workspace:FindFirstChild("Chest1")
-                        if ghostShipChest then
-                            hasGhostShipChest = true
-                        end
-                        
-                        if not hasSeaKing and not hasHydraStand and not hasGhostShipChest and not hydra and (not gs or not gs:FindFirstChild("HumanoidRootPart") or not seaKing:FindFirstChild("HumanoidRootPart")) then
-                            spamTeleport()
-                        else
-                            local function hasCollectedChest()
-                                local timeout = 220
-                                local elapsedTime = 0
-                                
-                                while elapsedTime < timeout do
-                                    task.wait(0.1)
-                                    elapsedTime = elapsedTime + 0.1
-                                    
-                                    local currentBeli = PlayerStats.beli.Value
-                                    local currentGem = PlayerStats.Gem.Value
-                                    
-                                    if (hasSeaKing or hasSeaKingChest or hasHydraStand or hasHydraChest) and currentBeli > initialBeli and currentGem > initialGem then
-                                        return true
-                                    elseif hasGhostShipChest then
-                                        th.New("Đã nhặt rương Ghost Ship!", 2)
-                                        return true
-                                    end
-                                    
-                                    hasSeaKing = false
-                                    hasSeaKingChest = false
-                                    for _, islandName in ipairs({"Legacy Island1", "Legacy Island2", "Legacy Island3", "Legacy Island4"}) do
-                                        local island = workspaceIsland:FindFirstChild(islandName)
-                                        if island and island:FindFirstChild("ChestSpawner") then
-                                            hasSeaKing = true
-                                            for _, v in pairs(island.ChestSpawner:GetChildren()) do
-                                                if v:IsA("Model") and v.Name:match("Chest$") then
-                                                    hasSeaKingChest = true
-                                                    break
-                                                end
-                                            end
-                                        end
-                                        if hasSeaKingChest then break end
-                                    end
-                                    
-                                    hasHydraStand = false
-                                    hasHydraChest = false
-                                    for _, name in ipairs({"Sea King Thunder", "Sea King Water", "Sea King Lava"}) do
-                                        local island = workspaceIsland:FindFirstChild(name)
-                                        if island then
-                                            if island:FindFirstChild("HydraStand") then
-                                                hasHydraStand = true
-                                            end
-                                            for _, chest in ipairs(island:GetChildren()) do
-                                                if chest:IsA("Model") and chest.Name:match("Chest$") then
-                                                    hasHydraChest = true
-                                                    break
-                                                end
-                                            end
-                                        end
-                                        if hasHydraChest then break end
-                                    end
-                                    
-                                    local ghostShipChestCheck = Workspace:FindFirstChild("Chest1")
-                                    if ghostShipChestCheck and ghostShipChestCheck:FindFirstChild("Top") then
-                                        hasGhostShipChest = true
-                                    end
-                                    
-                                    local seaKingCheck = Workspace.SeaMonster:FindFirstChild("SeaKing")
-                                    local hydraCheck = Workspace.SeaMonster:FindFirstChild("HydraSeaKing")
-                                    local gsCheck = Workspace.GhostMonster:FindFirstChild("Ghost Ship")
-                                    
-                                    if not hasSeaKing and not hasSeaKingChest and not hasHydraStand and not hasHydraChest and not hasGhostShipChest and not seaKingCheck and not hydraCheck and (not gsCheck or not gsCheck:FindFirstChild("HumanoidRootPart")) then
-                                        return false
-                                    end
-                                end
-                                return false
-                            end
-                            
-                            if hasCollectedChest() then
-                                spamTeleport()
-                            else
-                                th.New("Không nhặt được rương, dịch chuyển ngay!", 2)
-                                spamTeleport()
-                            end
-                        end
+                    -- ===== QUYẾT ĐỊNH HOP =====
+                    -- 1. Nếu còn boss → không hop
+                    if hasBoss then
+                        print("⚔️ Còn boss, không hop")
+                        task.wait(5)
+                        continue
                     end
+                    
+                    -- 2. Nếu boss sắp spawn → không hop
+                    if skSpawnTime < Settings.HopThreshold then
+                        print(string.format("🌊 Boss spawn sau %d giây, chờ đánh", skSpawnTime))
+                        task.wait(5)
+                        continue
+                    end
+                    
+                    if gsSpawnTime < Settings.HopThreshold then
+                        print(string.format("⛵ Ghost Ship spawn sau %d giây, chờ đánh", gsSpawnTime))
+                        task.wait(5)
+                        continue
+                    end
+                    
+                    -- 3. Nếu đã nhặt rương hoặc không còn rương → HOP
+                    if hasCollectedChest then
+                        print("🎯 Đã nhặt rương xong, bắt đầu tìm server mới...")
+                        spamTeleport()
+                        break
+                    end
+                    
+                    -- 4. Nếu không có boss và chưa nhặt rương → đợi nhặt
+                    print("📦 Chưa nhặt rương, đợi thêm...")
+                    task.wait(3)
                 end
             end)
         end
