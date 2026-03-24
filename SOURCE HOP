@@ -684,7 +684,7 @@ sTab:AddToggle({
                         end
                         
                         page = page + 1
-                        task.wait(0.02)  -- Delay rất nhỏ để quét nhanh
+                        task.wait(1)  -- Delay rất nhỏ để quét nhanh
                     end
                     
                     if not found and getgenv().SeaKinghop then
