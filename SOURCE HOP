@@ -561,184 +561,211 @@ local function removeOldestServer()
 end
 
 sTab:AddToggle({
-    Name = "Auto Hop Thông Minh | Beta (Sea King, Hydra, Ghost Ship)",
+    Name = "Auto Hop Thông Minh | Beta (Sea King, Hydra)",
     Default = Settings.autoskhdhop,
     Callback = function(value)
         getgenv().SeaKinghop = value
         Settings.autoskhdhop = value
         SaveSettings()
-        
         if not value then return end
-        
-        -- Lưu giá trị beli/gem ban đầu để theo dõi nhặt rương
-        local lastBeli = game.Players.LocalPlayer.PlayerStats.beli.Value
-        local lastGem = game.Players.LocalPlayer.PlayerStats.Gem.Value
-        
+
         spawn(function()
             while getgenv().SeaKinghop do
-                task.wait(2) -- Kiểm tra mỗi 2 giây
+                task.wait(1) -- Kiểm tra mỗi giây
+
+                local Workspace = game:GetService("Workspace")
+                local workspaceIsland = Workspace.Island
+                local LocalPlayer = game.Players.LocalPlayer
+                local PlayerStats = LocalPlayer.PlayerStats
+                local MainGui = LocalPlayer.PlayerGui.MainGui
+                local SecondSea = MainGui.StarterFrame.LegacyPoseFrame.SecondSea
                 
-                pcall(function()
-                    local Workspace = game:GetService("Workspace")
-                    local workspaceIsland = Workspace.Island
-                    local LocalPlayer = game.Players.LocalPlayer
-                    
-                    -- 1. KIỂM TRA BOSS
-                    local seaKing = Workspace.SeaMonster:FindFirstChild("SeaKing")
-                    local hydra = Workspace.SeaMonster:FindFirstChild("HydraSeaKing")
-                    local gs = Workspace.GhostMonster:FindFirstChild("Ghost Ship")
-                    
-                    local skHealth = seaKing and seaKing:FindFirstChild("Humanoid") and seaKing.Humanoid.Health or 0
-                    local hydraHealth = hydra and hydra:FindFirstChild("Humanoid") and hydra.Humanoid.Health or 0
-                    local gsHealth = gs and gs:FindFirstChild("Humanoid") and gs.Humanoid.Health or 0
-                    
-                    local hasBoss = (seaKing and skHealth > 0) or (hydra and hydraHealth > 0) or (gs and gsHealth > 0)
-                    
-                    if hasBoss then
-                        -- Còn boss, không hop
-                        th.New("⚔️ Còn boss, tiếp tục đánh...", 2)
-                        continue
+                -- Lấy đối tượng boss
+                local seaKing = Workspace.SeaMonster:FindFirstChild("SeaKing")
+                local hydra = Workspace.SeaMonster:FindFirstChild("HydraSeaKing")
+                local gs = Workspace.GhostMonster:FindFirstChild("Ghost Ship")
+
+                -- Lấy thời gian spawn từ GUI
+                local skTimeLabel = SecondSea:FindFirstChild("SKTimeLabel")
+                local gsTimeLabel = SecondSea:FindFirstChild("GSTimeLabel")
+
+                local function ConvertTimeToSeconds(timeStr)
+                    local h, m, s = timeStr:match("(%d+):(%d+):(%d+)")
+                    if h and m and s then
+                        return tonumber(h) * 3600 + tonumber(m) * 60 + tonumber(s)
                     end
-                    
-                    -- 2. KIỂM TRA RƯƠNG THỰC TẾ (KHÔNG PHẢI CHESTSPAWNER)
-                    local hasSeaKingChest = false
-                    for _, islandName in ipairs({"Legacy Island1", "Legacy Island2", "Legacy Island3", "Legacy Island4"}) do
-                        local island = workspaceIsland:FindFirstChild(islandName)
-                        if island and island:FindFirstChild("ChestSpawner") then
-                            -- Kiểm tra xem có rương thực tế trong ChestSpawner không
-                            for _, chest in ipairs(island.ChestSpawner:GetChildren()) do
-                                if chest:IsA("Model") and chest.Name:match("Chest$") then
-                                    hasSeaKingChest = true
-                                    break
-                                end
+                    return 9999
+                end
+
+                local skSpawnTime = skTimeLabel and ConvertTimeToSeconds(skTimeLabel.Text) or 9999
+                local gsSpawnTime = gsTimeLabel and ConvertTimeToSeconds(gsTimeLabel.Text) or 9999
+
+                -- ========== KIỂM TRA RƯƠNG THỰC TẾ ==========
+                
+                -- Kiểm tra rương Sea King (Legacy Island)
+                local hasSeaKingChest = false
+                for _, islandName in ipairs({"Legacy Island1", "Legacy Island2", "Legacy Island3", "Legacy Island4"}) do
+                    local island = workspaceIsland:FindFirstChild(islandName)
+                    if island and island:FindFirstChild("ChestSpawner") then
+                        for _, chest in ipairs(island.ChestSpawner:GetChildren()) do
+                            if chest:IsA("Model") and chest.Name:match("Chest$") then
+                                hasSeaKingChest = true
+                                break
                             end
                         end
-                        if hasSeaKingChest then break end
                     end
-                    
-                    local hasHydraChest = false
-                    for _, name in ipairs({"Sea King Thunder", "Sea King Water", "Sea King Lava"}) do
-                        local island = workspaceIsland:FindFirstChild(name)
-                        if island then
-                            for _, chest in ipairs(island:GetChildren()) do
-                                if chest:IsA("Model") and chest.Name:match("Chest$") then
-                                    hasHydraChest = true
-                                    break
-                                end
+                    if hasSeaKingChest then break end
+                end
+
+                -- Kiểm tra rương Hydra (Sea King Thunder/Water/Lava)
+                local hasHydraChest = false
+                for _, name in ipairs({"Sea King Thunder", "Sea King Water", "Sea King Lava"}) do
+                    local island = workspaceIsland:FindFirstChild(name)
+                    if island then
+                        for _, chest in ipairs(island:GetChildren()) do
+                            if chest:IsA("Model") and chest.Name:match("Chest$") then
+                                hasHydraChest = true
+                                break
                             end
                         end
-                        if hasHydraChest then break end
                     end
-                    
-                    local hasGhostShipChest = false
-                    for i = 1, 5 do
-                        local chest = Workspace:FindFirstChild("Chest" .. i)
-                        if chest and chest:FindFirstChild("Top") then
-                            hasGhostShipChest = true
-                            break
-                        end
+                    if hasHydraChest then break end
+                end
+
+                -- Kiểm tra rương Ghost Ship
+                local hasGhostShipChest = false
+                for i = 1, 5 do
+                    local chest = Workspace:FindFirstChild("Chest" .. i)
+                    if chest and chest:FindFirstChild("Top") then
+                        hasGhostShipChest = true
+                        break
                     end
+                end
+
+                -- Kiểm tra boss có sống không
+                local skHealth = seaKing and seaKing:FindFirstChild("Humanoid") and seaKing.Humanoid.Health or 0
+                local hydraHealth = hydra and hydra:FindFirstChild("Humanoid") and hydra.Humanoid.Health or 0
+                local gsHealth = gs and gs:FindFirstChild("Humanoid") and gs.Humanoid.Health or 0
+                
+                local hasBoss = (seaKing and skHealth > 0) or (hydra and hydraHealth > 0) or (gs and gsHealth > 0)
+                local hasChest = hasSeaKingChest or hasHydraChest or hasGhostShipChest
+
+                -- ========== QUYẾT ĐỊNH HOP ==========
+                
+                -- Trường hợp 1: Còn boss hoặc sắp spawn boss
+                if hasBoss then
+                    th.New("⚔️ Còn boss, tiếp tục đánh...", 2)
+                    -- Không hop, tiếp tục vòng lặp
                     
-                    local hasChest = hasSeaKingChest or hasHydraChest or hasGhostShipChest
+                elseif skSpawnTime < Settings.HopThreshold then
+                    th.New("🌊 Hydra/Sea King spawn sau " .. skSpawnTime .. " giây, không hop!", 2)
                     
-                    -- 3. NẾU CÒN RƯƠNG, ĐỢI NHẶT TRONG HopThreshold GIÂY
-                    if hasChest then
-                        th.New(string.format("📦 Còn rương, đợi nhặt trong %d giây...", Settings.HopThreshold), 3)
+                elseif gsSpawnTime < Settings.HopThreshold then
+                    th.New("⛵ Ghost Ship spawn sau " .. gsSpawnTime .. " giây, không hop!", 2)
+                    
+                -- Trường hợp 2: Còn rương, đợi nhặt
+                elseif hasChest then
+                    th.New("📦 Còn rương, đợi nhặt trong " .. Settings.HopThreshold .. " giây...", 3)
+                    
+                    local startWait = tick()
+                    local waitTime = Settings.HopThreshold
+                    
+                    while getgenv().SeaKinghop and (tick() - startWait) < waitTime do
+                        task.wait(1)
                         
-                        local startWait = tick()
-                        local chestStillExists = true
+                        -- Kiểm tra lại xem còn rương không
+                        local stillHasChest = false
                         
-                        while getgenv().SeaKinghop and (tick() - startWait) < Settings.HopThreshold and chestStillExists do
-                            task.wait(1)
-                            
-                            -- Kiểm tra lại xem rương còn không
-                            local checkChest = false
-                            for i = 1, 5 do
-                                if Workspace:FindFirstChild("Chest" .. i) and Workspace["Chest" .. i]:FindFirstChild("Top") then
-                                    checkChest = true
-                                    break
-                                end
+                        -- Kiểm tra Ghost Ship chest
+                        for i = 1, 5 do
+                            local chest = Workspace:FindFirstChild("Chest" .. i)
+                            if chest and chest:FindFirstChild("Top") then
+                                stillHasChest = true
+                                break
                             end
-                            
+                        end
+                        
+                        -- Kiểm tra Sea King chest
+                        if not stillHasChest then
                             for _, islandName in ipairs({"Legacy Island1", "Legacy Island2", "Legacy Island3", "Legacy Island4"}) do
                                 local island = workspaceIsland:FindFirstChild(islandName)
                                 if island and island:FindFirstChild("ChestSpawner") then
                                     for _, chest in ipairs(island.ChestSpawner:GetChildren()) do
                                         if chest:IsA("Model") and chest.Name:match("Chest$") then
-                                            checkChest = true
+                                            stillHasChest = true
                                             break
                                         end
                                     end
                                 end
+                                if stillHasChest then break end
                             end
-                            
+                        end
+                        
+                        -- Kiểm tra Hydra chest
+                        if not stillHasChest then
                             for _, name in ipairs({"Sea King Thunder", "Sea King Water", "Sea King Lava"}) do
                                 local island = workspaceIsland:FindFirstChild(name)
                                 if island then
                                     for _, chest in ipairs(island:GetChildren()) do
                                         if chest:IsA("Model") and chest.Name:match("Chest$") then
-                                            checkChest = true
+                                            stillHasChest = true
                                             break
                                         end
                                     end
                                 end
-                            end
-                            
-                            chestStillExists = checkChest
-                            
-                            -- Nếu hết rương rồi thì thoát sớm
-                            if not chestStillExists then
-                                th.New("✅ Đã nhặt hết rương!", 2)
-                                break
+                                if stillHasChest then break end
                             end
                         end
                         
-                        -- Sau khi chờ, kiểm tra lại boss (phòng trường hợp boss spawn trong lúc chờ)
-                        local newSeaKing = Workspace.SeaMonster:FindFirstChild("SeaKing")
-                        local newHydra = Workspace.SeaMonster:FindFirstChild("HydraSeaKing")
-                        local newGs = Workspace.GhostMonster:FindFirstChild("Ghost Ship")
-                        local newSkHealth = newSeaKing and newSeaKing:FindFirstChild("Humanoid") and newSeaKing.Humanoid.Health or 0
-                        local newHydraHealth = newHydra and newHydra:FindFirstChild("Humanoid") and newHydra.Humanoid.Health or 0
-                        local newGsHealth = newGs and newGs:FindFirstChild("Humanoid") and newGs.Humanoid.Health or 0
-                        
-                        if (newSeaKing and newSkHealth > 0) or (newHydra and newHydraHealth > 0) or (newGs and newGsHealth > 0) then
-                            th.New("⚠️ Boss vừa spawn, hủy hop!", 2)
-                            continue
-                        end
-                    end
-                    
-                    -- 4. KIỂM TRA LẠI BOSS VÀ RƯƠNG LẦN CUỐI
-                    local finalSeaKing = Workspace.SeaMonster:FindFirstChild("SeaKing")
-                    local finalHydra = Workspace.SeaMonster:FindFirstChild("HydraSeaKing")
-                    local finalGs = Workspace.GhostMonster:FindFirstChild("Ghost Ship")
-                    local finalSkHealth = finalSeaKing and finalSeaKing:FindFirstChild("Humanoid") and finalSeaKing.Humanoid.Health or 0
-                    local finalHydraHealth = finalHydra and finalHydra:FindFirstChild("Humanoid") and finalHydra.Humanoid.Health or 0
-                    local finalGsHealth = finalGs and finalGs:FindFirstChild("Humanoid") and finalGs.Humanoid.Health or 0
-                    
-                    local finalHasChest = false
-                    for i = 1, 5 do
-                        if Workspace:FindFirstChild("Chest" .. i) and Workspace["Chest" .. i]:FindFirstChild("Top") then
-                            finalHasChest = true
+                        -- Nếu hết rương rồi thì thoát sớm
+                        if not stillHasChest then
+                            th.New("✅ Đã nhặt hết rương!", 2)
                             break
                         end
                     end
                     
-                    -- Nếu còn boss hoặc rương → không hop
-                    if (finalSeaKing and finalSkHealth > 0) or (finalHydra and finalHydraHealth > 0) or (finalGs and finalGsHealth > 0) or finalHasChest then
-                        th.New("⚠️ Vẫn còn boss/rương, tiếp tục...", 2)
-                        continue
+                    -- Kiểm tra lại boss sau khi chờ (phòng boss vừa spawn)
+                    local newSeaKing = Workspace.SeaMonster:FindFirstChild("SeaKing")
+                    local newHydra = Workspace.SeaMonster:FindFirstChild("HydraSeaKing")
+                    local newGs = Workspace.GhostMonster:FindFirstChild("Ghost Ship")
+                    local newSkHealth = newSeaKing and newSeaKing:FindFirstChild("Humanoid") and newSeaKing.Humanoid.Health or 0
+                    local newHydraHealth = newHydra and newHydra:FindFirstChild("Humanoid") and newHydra.Humanoid.Health or 0
+                    local newGsHealth = newGs and newGs:FindFirstChild("Humanoid") and newGs.Humanoid.Health or 0
+                    
+                    if (newSeaKing and newSkHealth > 0) or (newHydra and newHydraHealth > 0) or (newGs and newGsHealth > 0) then
+                        th.New("⚠️ Boss vừa spawn, hủy hop!", 2)
+                        -- Không hop, quay lại đầu vòng lặp
+                    else
+                        -- Hết rương và không có boss -> HOP
+                        th.New("🔄 Không còn boss/rương, tìm server mới...", 2)
+                        
+                        local selectedServer = findValidServer()
+                        if selectedServer then
+                            saveTeleportedServers(selectedServer.JobId)
+                            th.New("🚀 Đang hop đến server mới...", 2)
+                            TeleportService:TeleportToPlaceInstance(selectedServer.PlaceId, selectedServer.JobId, game.Players.LocalPlayer)
+                            getgenv().SeaKinghop = false
+                            break
+                        else
+                            removeOldestServer()
+                            th.New("❌ Không tìm thấy server, thử lại sau 30s...", 3)
+                            for i = 1, 30 do
+                                if not getgenv().SeaKinghop then break end
+                                task.wait(1)
+                            end
+                        end
                     end
                     
-                    -- 5. KHÔNG CÒN BOSS VÀ RƯƠNG → HOP
-                    th.New("🔄 Không còn boss/rương, tìm server mới...", 3)
+                -- Trường hợp 3: Không có boss, không có rương -> Hop ngay
+                else
+                    th.New("🔄 Không còn boss/rương, tìm server mới...", 2)
                     
-                    -- Gọi hàm Teleport() của bạn
                     local selectedServer = findValidServer()
                     if selectedServer then
                         saveTeleportedServers(selectedServer.JobId)
                         th.New("🚀 Đang hop đến server mới...", 2)
                         TeleportService:TeleportToPlaceInstance(selectedServer.PlaceId, selectedServer.JobId, game.Players.LocalPlayer)
-                        getgenv().SeaKinghop = false -- Tắt sau khi hop
+                        getgenv().SeaKinghop = false
                         break
                     else
                         removeOldestServer()
@@ -748,7 +775,7 @@ sTab:AddToggle({
                             task.wait(1)
                         end
                     end
-                end)
+                end
             end
         end)
     end
