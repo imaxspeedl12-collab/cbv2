@@ -571,75 +571,48 @@ local function findValidServer()
         return nil
     end
     
-    -- Hàm tính thời gian còn lại đến boss
-    local function getTimeToBoss(uptime)
-        local bossTimes = {
-            4*3600 + 21*60,   -- 4h21
-            8*3600 + 52*60,   -- 8h52
-            0*3600 + 59*60,   -- 0h59
-            2*3600 + 7*60,    -- 2h07
-            3*3600 + 14*60,   -- 3h14
-            5*3600 + 31*60,   -- 5h31
-            13*3600 + 28*60,  -- 13h28
-            18*3600 + 10*60,  -- 18h10
-            7*3600 + 45*60,   -- 7h45
-            6*3600 + 38*60,   -- 6h38
-            10*3600 + 3*60,   -- 10h03
-            11*3600 + 11*60   -- 11h11
-        }
-        
-        for _, bossTime in ipairs(bossTimes) do
-            if uptime < bossTime then
-                return bossTime - uptime
-            end
-        end
-        return (24*3600 - uptime) + bossTimes[1]
-    end
-    
+    local validServers = { group1 = {}, group2 = {}, group3 = {}, group4 = {}, group5 = {} ,group6 = {}, group7 = {}, group8 = {},group9 = {}, group10 = {} , group11 = {}, group12 = {}}
     local currentJobId = game.JobId
     local currentPlaceId = game.PlaceId
-    local bestServer = nil
-    local bestTime = 999999
     
     for _, server in ipairs(servers) do
-        if server.JobId and server.PlaceId == currentPlaceId and server.JobId ~= currentJobId and server.CreatedAt and server.PlayerCount and server.PlayerCount < 12 then
+        if server.JobId and server.PlaceId == currentPlaceId and server.JobId ~= currentJobId and server.CreatedAt and server.PlayerCount then
             local uptime = os.time() - server.CreatedAt
-            local h = math.floor(uptime / 3600)
-            local m = math.floor((uptime % 3600) / 60)
             
-            -- Kiểm tra khung giờ boss
-            local isBossTime = false
-            if (h == 4 and m >= 21 and m <= 30) or
-               (h == 8 and m >= 52 and m <= 59) or (h == 9 and m <= 1) or
-               (h == 0 and m >= 59 and m <= 67) or
-               (h == 2 and m >= 7 and m <= 14) or
-               (h == 3 and m >= 14 and m <= 21) or
-               (h == 5 and m >= 31 and m <= 37) or
-               (h == 13 and m >= 28 and m <= 35) or
-               (h == 18 and m >= 10 and m <= 17) or
-               (h == 7 and m >= 45 and m <= 52) or
-               (h == 6 and m >= 38 and m <= 45) or
-               (h == 10 and m >= 3 and m <= 9) or
-               (h == 11 and m >= 11 and m <= 17) then
-                isBossTime = true
-            end
-            
-            if isBossTime then
-                local timeLeft = getTimeToBoss(uptime)
-                if timeLeft <= 300 and timeLeft < bestTime then
-                    bestTime = timeLeft
-                    bestServer = server
-                end
+            if uptime >= 4 * 3600 + 21 * 60 and uptime <= 4 * 3600 + 30 * 60 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 8 * 3600 + 52 * 60 and uptime <= 9 * 3600 + 1 * 60 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 59 * 60 + 1 and uptime <= 1 * 3600 + 7 * 60 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 2 * 3600 + 7 * 60 and uptime <= 2 * 3600 + 14 * 60 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 3 * 3600 + 14 * 60 and uptime <= 3 * 3600 + 21 * 60 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 5 * 3600 + 31 * 60 and uptime <= 5 * 3600 + 37 * 60 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 13 * 3600 + 28 * 60 and uptime <= 13 * 3600 + 35 * 60 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 18 * 3600 + 10 * 60 and uptime <= 18 * 3600 + 17 * 60 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 7 * 3600 + 45 * 60 and uptime <= 7 * 3600 + 52 * 60 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 6 * 3600 + 38 * 60 and uptime <= 6 * 3600 + 45 * 60 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 10 * 3600 + 3 * 60 and uptime <= 10 * 3600 + 9 * 60 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 11 * 3600 + 11 * 60 and uptime <= 11 * 3600 + 17 * 60 then
+    table.insert(validServers.group1, server)
             end
         end
     end
     
-    if bestServer then
-        local uptime = os.time() - bestServer.CreatedAt
-        local h = math.floor(uptime / 3600)
-        local m = math.floor((uptime % 3600) / 60)
-        print(string.format("🎯 Chọn server: %dh%02dm | còn %d giây có boss", h, m, bestTime))
-        return bestServer
+    math.randomseed(tick())
+    local priorityGroups = { "group2", "group3", "group1", "group4" ,"group5","group6","group7","group8","group9","group10","group11","group12"}
+    for _, group in ipairs(priorityGroups) do
+        if #validServers[group] > 0 then
+            return validServers[group][math.random(#validServers[group])]
+        end
     end
     
     return nil
@@ -671,21 +644,43 @@ sTab:AddToggle({
         SaveSettings()
         
         if value then
-            -- Lưu gem gốc khi bật script
-            local startGem = game.Players.LocalPlayer.PlayerStats.Gem.Value
-            local startBeli = game.Players.LocalPlayer.PlayerStats.beli.Value
-            print("📊 Gem ban đầu: " .. startGem)
+            local startGem = nil
+            local startBeli = nil
+            local bossWasAlive = false
+            local waitingForChest = false
             
-            local hasKilledBoss = false
+            -- ===== HÀM SPAM HOP LIÊN TỤC =====
+            local function spamHop()
+                coroutine.wrap(function()
+                    while getgenv().SeaKinghop do
+                        local selectedServer = findValidServer()
+                        if selectedServer then
+                            print(string.format("🎯 HOP VÀO: %s", selectedServer.JobId))
+                            saveTeleportedServers(selectedServer.JobId)
+                            TeleportService:TeleportToPlaceInstance(selectedServer.PlaceId, selectedServer.JobId, game.Players.LocalPlayer)
+                            -- Reset cho server mới
+                            startGem = nil
+                            startBeli = nil
+                            bossWasAlive = false
+                            waitingForChest = false
+                        end
+                        task.wait(0.2)
+                    end
+                end)()
+            end
             
             spawn(function()
                 while getgenv().SeaKinghop do
                     task.wait(0.6)
                     
+                    if startGem == nil then
+                        startGem = game.Players.LocalPlayer.PlayerStats.Gem.Value
+                        startBeli = game.Players.LocalPlayer.PlayerStats.beli.Value
+                    end
+                    
                     local Workspace = game:GetService("Workspace")
                     local workspaceIsland = Workspace.Island
-                    local Players = game:GetService("Players")
-                    local LocalPlayer = Players.LocalPlayer
+                    local LocalPlayer = game.Players.LocalPlayer
                     local PlayerStats = LocalPlayer.PlayerStats
                     local MainGui = LocalPlayer.PlayerGui.MainGui
                     local SecondSea = MainGui.StarterFrame.LegacyPoseFrame.SecondSea
@@ -708,20 +703,34 @@ sTab:AddToggle({
                     local skSpawnTime = skTimeLabel and ConvertTimeToSeconds(skTimeLabel.Text) or 9999
                     local gsSpawnTime = gsTimeLabel and ConvertTimeToSeconds(gsTimeLabel.Text) or 9999
                     
-                    -- ===== HÀM SPAM TELEPORT =====
-                    local function spamTeleport()
-                        coroutine.wrap(function()
-                            while getgenv().SeaKinghop do
-                                local selectedServer = findValidServer()
-                                if selectedServer then
-                                    print(string.format("🎯 HOP VÀO: %s", selectedServer.JobId))
-                                    saveTeleportedServers(selectedServer.JobId)
-                                    TeleportService:TeleportToPlaceInstance(selectedServer.PlaceId, selectedServer.JobId, game.Players.LocalPlayer)
-                                    break
-                                end
-                                task.wait(0.2)
+                    -- ===== KIỂM TRA RƯƠNG =====
+                    local function hasAnyChest()
+                        for i = 1, 5 do
+                            if Workspace:FindFirstChild("Chest" .. i) and Workspace["Chest" .. i]:FindFirstChild("Top") then
+                                return true
                             end
-                        end)()
+                        end
+                        for _, islandName in ipairs({"Legacy Island1", "Legacy Island2", "Legacy Island3", "Legacy Island4"}) do
+                            local island = workspaceIsland:FindFirstChild(islandName)
+                            if island and island:FindFirstChild("ChestSpawner") then
+                                for _, chest in ipairs(island.ChestSpawner:GetChildren()) do
+                                    if chest:IsA("Model") and chest.Name:match("Chest$") then
+                                        return true
+                                    end
+                                end
+                            end
+                        end
+                        for _, name in ipairs({"Sea King Thunder", "Sea King Water", "Sea King Lava"}) do
+                            local island = workspaceIsland:FindFirstChild(name)
+                            if island then
+                                for _, chest in ipairs(island:GetChildren()) do
+                                    if chest:IsA("Model") and chest.Name:match("Chest$") then
+                                        return true
+                                    end
+                                end
+                            end
+                        end
+                        return false
                     end
                     
                     -- ===== KIỂM TRA BOSS =====
@@ -730,11 +739,33 @@ sTab:AddToggle({
                     local gsHealth = gs and gs:FindFirstChild("Humanoid") and gs.Humanoid.Health or 0
                     
                     local hasBoss = (seaKing and skHealth > 0) or (hydra and hydraHealth > 0) or (gs and gsHealth > 0)
+                    local hasChest = hasAnyChest()
                     
-                    -- ===== NẾU CÓ BOSS =====
+                    -- ===== NẾU ĐANG CHỜ NHẶT RƯƠNG =====
+                    if waitingForChest then
+                        local currentGem = PlayerStats.Gem.Value
+                        local currentBeli = PlayerStats.beli.Value
+                        
+                        if currentGem > startGem or currentBeli > startBeli then
+                            print(string.format("✅ NHẶT RƯƠNG! Gem: %d → %d", startGem, currentGem))
+                            waitingForChest = false
+                            spamHop()  -- BẮT ĐẦU SPAM HOP
+                        else
+                            task.wait(2)
+                        end
+                        continue
+                    end
+                    
+                    -- ===== NẾU ĐANG CÓ BOSS =====
                     if hasBoss then
-                        hasKilledBoss = true
+                        bossWasAlive = true
                         task.wait(5)
+                        continue
+                    end
+                    
+                    -- ===== NẾU CÓ RƯƠNG SẴN (KHÔNG BOSS) =====
+                    if hasChest and not hasBoss and not waitingForChest then
+                        waitingForChest = true
                         continue
                     end
                     
@@ -749,26 +780,21 @@ sTab:AddToggle({
                         continue
                     end
                     
-                    -- ===== SAU KHI BOSS CHẾT =====
-                    if hasKilledBoss then
-                        local currentGem = PlayerStats.Gem.Value
-                        local currentBeli = PlayerStats.beli.Value
-                        
-                        if currentGem > startGem or currentBeli > startBeli then
-                            print(string.format("✅ Nhặt rương! Gem: %d → %d", startGem, currentGem))
-                            spamTeleport()
-                        else
-                            task.wait(3)
-                        end
-                    else
-                        spamTeleport()
+                    -- ===== BOSS VỪA CHẾT =====
+                    if bossWasAlive and not hasBoss then
+                        task.wait(5)
+                        waitingForChest = true
+                        bossWasAlive = false
+                        continue
                     end
+                    
+                    -- ===== KHÔNG CÓ BOSS, KHÔNG RƯƠNG → SPAM HOP =====
+                    spamHop()
                 end
             end)
         end
     end
 })
-
 sTab:AddSlider({
     Name = "Thời gian Chờ GS+HD+SK (giây)",
     Min = 0,
