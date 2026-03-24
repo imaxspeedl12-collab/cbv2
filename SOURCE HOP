@@ -634,12 +634,6 @@ local function Teleport()
     end
 end
 
--- Lưu gem gốc khi bật script
-local initialGem = game.Players.LocalPlayer.PlayerStats.Gem.Value
-local initialBeli = game.Players.LocalPlayer.PlayerStats.beli.Value
-print("📊 Đã lưu gem gốc: " .. initialGem)
-print("📊 Đã lưu beli gốc: " .. initialBeli)
-
 -- ===== AUTO HOP (GIỮ NGUYÊN CẤU TRÚC SPAM CŨ) =====
 sTab:AddToggle({
     Name = "Auto Hop Thông Minh | Beta (Sea King, Hydra)",
@@ -650,19 +644,20 @@ sTab:AddToggle({
         SaveSettings()
         
         if value then
+            -- Lưu gem gốc khi bật script
             local startGem = game.Players.LocalPlayer.PlayerStats.Gem.Value
             local startBeli = game.Players.LocalPlayer.PlayerStats.beli.Value
-            local hasCollectedChest = false
-            local hasKilledBoss = false
-            local bossWasAlive = false
+            print("📊 Gem ban đầu: " .. startGem)
+            print("📊 Beli ban đầu: " .. startBeli)
             
             spawn(function()
                 while getgenv().SeaKinghop do
-                    task.wait(1)
+                    task.wait(0.6)
                     
                     local Workspace = game:GetService("Workspace")
                     local workspaceIsland = Workspace.Island
-                    local LocalPlayer = game.Players.LocalPlayer
+                    local Players = game:GetService("Players")
+                    local LocalPlayer = Players.LocalPlayer
                     local PlayerStats = LocalPlayer.PlayerStats
                     local MainGui = LocalPlayer.PlayerGui.MainGui
                     local SecondSea = MainGui.StarterFrame.LegacyPoseFrame.SecondSea
@@ -685,6 +680,21 @@ sTab:AddToggle({
                     local skSpawnTime = skTimeLabel and ConvertTimeToSeconds(skTimeLabel.Text) or 9999
                     local gsSpawnTime = gsTimeLabel and ConvertTimeToSeconds(gsTimeLabel.Text) or 9999
                     
+                    -- ===== HÀM SPAM TELEPORT =====
+                    local function spamTeleport()
+                        coroutine.wrap(function()
+                            while getgenv().SeaKinghop do
+                                local success = pcall(function()
+                                    Teleport()
+                                end)
+                                if success then
+                                    break
+                                end
+                                task.wait(0.2)
+                            end
+                        end)()
+                    end
+                    
                     -- ===== KIỂM TRA BOSS =====
                     local skHealth = seaKing and seaKing:FindFirstChild("Humanoid") and seaKing.Humanoid.Health or 0
                     local hydraHealth = hydra and hydra:FindFirstChild("Humanoid") and hydra.Humanoid.Health or 0
@@ -692,98 +702,41 @@ sTab:AddToggle({
                     
                     local hasBoss = (seaKing and skHealth > 0) or (hydra and hydraHealth > 0) or (gs and gsHealth > 0)
                     
+                    -- ===== QUYẾT ĐỊNH HOP =====
+                    
+                    -- 1. Nếu còn boss → không hop
                     if hasBoss then
-                        bossWasAlive = true
+                        print("⚔️ Còn boss, không hop")
+                        task.wait(5)
+                        continue
                     end
                     
-                    if bossWasAlive and not hasBoss then
-                        hasKilledBoss = true
-                        print("✅ Đã đánh xong boss!")
+                    -- 2. Nếu boss sắp spawn → không hop
+                    if skSpawnTime < Settings.HopThreshold then
+                        print(string.format("🌊 Boss spawn sau %d giây", skSpawnTime))
+                        task.wait(5)
+                        continue
                     end
                     
-                    -- ===== KIỂM TRA RƯƠNG =====
-                    local hasChest = false
-                    for i = 1, 5 do
-                        if Workspace:FindFirstChild("Chest" .. i) and Workspace["Chest" .. i]:FindFirstChild("Top") then
-                            hasChest = true
-                            break
-                        end
+                    if gsSpawnTime < Settings.HopThreshold then
+                        print(string.format("⛵ Ghost Ship spawn sau %d giây", gsSpawnTime))
+                        task.wait(5)
+                        continue
                     end
                     
-                    if not hasChest then
-                        for _, islandName in ipairs({"Legacy Island1", "Legacy Island2", "Legacy Island3", "Legacy Island4"}) do
-                            local island = workspaceIsland:FindFirstChild(islandName)
-                            if island and island:FindFirstChild("ChestSpawner") then
-                                for _, chest in ipairs(island.ChestSpawner:GetChildren()) do
-                                    if chest:IsA("Model") and chest.Name:match("Chest$") then
-                                        hasChest = true
-                                        break
-                                    end
-                                end
-                            end
-                            if hasChest then break end
-                        end
-                    end
-                    
-                    if not hasChest then
-                        for _, name in ipairs({"Sea King Thunder", "Sea King Water", "Sea King Lava"}) do
-                            local island = workspaceIsland:FindFirstChild(name)
-                            if island then
-                                for _, chest in ipairs(island:GetChildren()) do
-                                    if chest:IsA("Model") and chest.Name:match("Chest$") then
-                                        hasChest = true
-                                        break
-                                    end
-                                end
-                            end
-                            if hasChest then break end
-                        end
-                    end
-                    
-                    -- ===== KIỂM TRA GEM TĂNG =====
+                    -- 3. KIỂM TRA GEM TĂNG (ĐÃ NHẶT RƯƠNG)
                     local currentGem = PlayerStats.Gem.Value
                     local currentBeli = PlayerStats.beli.Value
                     
-                    if not hasCollectedChest and (currentGem > startGem or currentBeli > startBeli) then
-                        hasCollectedChest = true
+                    if currentGem > startGem or currentBeli > startBeli then
                         print(string.format("✅ Đã nhặt rương! Gem: %d → %d", startGem, currentGem))
-                    end
-                    
-                    -- ===== QUYẾT ĐỊNH HOP =====
-                    
-                    -- 1. Nếu đã đánh boss xong và đã nhặt rương (hoặc hết rương) → HOP
-                    if hasKilledBoss and (hasCollectedChest or not hasChest) then
-                        print("🎯 Đã xong, bắt đầu tìm server mới...")
+                        print("🎯 Tiến hành hop...")
                         spamTeleport()
                         break
-                    end
-                    
-                    -- 2. Nếu chưa có boss và không có rương → HOP NGAY (không đợi)
-                    if not hasBoss and not hasChest and not bossWasAlive then
-                        print("🔁 Server chưa có boss, tìm server mới...")
-                        spamTeleport()
-                        break
-                    end
-                    
-                    -- 3. Nếu có boss → đánh boss
-                    if hasBoss then
-                        print("⚔️ Đang có boss, tiếp tục đánh...")
-                        task.wait(5)
-                        continue
-                    end
-                    
-                    -- 4. Nếu đã đánh boss xong nhưng chưa nhặt rương → đợi nhặt
-                    if hasKilledBoss and not hasCollectedChest and hasChest then
-                        print("📦 Chờ nhặt rương...")
+                    else
+                        -- Chưa nhặt rương, đợi thêm
+                        print("📦 Chưa thấy rương, đợi 3 giây...")
                         task.wait(3)
-                        continue
-                    end
-                    
-                    -- 5. Nếu boss sắp spawn → chờ
-                    if skSpawnTime < Settings.HopThreshold or gsSpawnTime < Settings.HopThreshold then
-                        print("⏳ Boss sắp spawn, chờ đánh...")
-                        task.wait(5)
-                        continue
                     end
                 end
             end)
