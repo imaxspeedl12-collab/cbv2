@@ -649,7 +649,7 @@ sTab:AddToggle({
             local startBeli = game.Players.LocalPlayer.PlayerStats.beli.Value
             print("📊 Gem ban đầu: " .. startGem)
             
-            local hasKilledBoss = false  -- Đánh dấu đã đánh boss chưa
+            local hasKilledBoss = false
             
             spawn(function()
                 while getgenv().SeaKinghop do
@@ -681,14 +681,19 @@ sTab:AddToggle({
                     local skSpawnTime = skTimeLabel and ConvertTimeToSeconds(skTimeLabel.Text) or 9999
                     local gsSpawnTime = gsTimeLabel and ConvertTimeToSeconds(gsTimeLabel.Text) or 9999
                     
-                    -- ===== HÀM SPAM TELEPORT =====
+                    -- ===== HÀM SPAM TELEPORT (KHÔNG BREAK) =====
                     local function spamTeleport()
                         coroutine.wrap(function()
+                            local attempt = 0
                             while getgenv().SeaKinghop do
-                                local success = pcall(function()
-                                    Teleport()
-                                end)
-                                if success then
+                                attempt = attempt + 1
+                                print(string.format("🔄 Lần thử #%d - Đang tìm server...", attempt))
+                                
+                                local selectedServer = findValidServer()
+                                if selectedServer then
+                                    print(string.format("🎯 TÌM THẤY! HOP VÀO: %s", selectedServer.JobId))
+                                    saveTeleportedServers(selectedServer.JobId)
+                                    TeleportService:TeleportToPlaceInstance(selectedServer.PlaceId, selectedServer.JobId, game.Players.LocalPlayer)
                                     break
                                 end
                                 task.wait(0.2)
@@ -703,7 +708,7 @@ sTab:AddToggle({
                     
                     local hasBoss = (seaKing and skHealth > 0) or (hydra and hydraHealth > 0) or (gs and gsHealth > 0)
                     
-                    -- ===== NẾU CÓ BOSS, ĐÁNH DẤU =====
+                    -- ===== NẾU CÓ BOSS =====
                     if hasBoss then
                         hasKilledBoss = true
                         print("⚔️ Đang có boss...")
@@ -724,7 +729,7 @@ sTab:AddToggle({
                         continue
                     end
                     
-                    -- ===== SAU KHI BOSS CHẾT, KIỂM TRA GEM =====
+                    -- ===== SAU KHI BOSS CHẾT =====
                     if hasKilledBoss then
                         local currentGem = PlayerStats.Gem.Value
                         local currentBeli = PlayerStats.beli.Value
@@ -733,16 +738,16 @@ sTab:AddToggle({
                             print(string.format("✅ Đã nhặt rương! Gem: %d → %d", startGem, currentGem))
                             print("🎯 Tiến hành hop...")
                             spamTeleport()
-                            break
+                            -- KHÔNG BREAK, để vòng lặp tiếp tục sau khi hop vào server mới
                         else
                             print("📦 Boss chết nhưng chưa thấy rương, đợi 3 giây...")
                             task.wait(3)
                         end
                     else
-                        -- Nếu chưa thấy boss nào (server mới) → hop ngay
+                        -- Server mới, không có boss → hop ngay
                         print("🔁 Server không có boss, tìm server mới...")
                         spamTeleport()
-                        break
+                        -- KHÔNG BREAK
                     end
                 end
             end)
