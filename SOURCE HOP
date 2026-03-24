@@ -642,7 +642,7 @@ sTab:AddToggle({
                         continue
                     end
                     
-                    -- ===== KHÔNG CÒN BOSS → TÌM SERVER MỚI (CÁCH CỦA THẰNG KIA) =====
+                    -- ===== KHÔNG CÒN BOSS → TÌM SERVER MỚI =====
                     print("🔁 Không còn boss, lấy danh sách server...")
                     
                     -- Lấy tất cả server 1 lần duy nhất
@@ -658,15 +658,15 @@ sTab:AddToggle({
                     
                     print(string.format("📊 Đã lấy %d server", #allServers))
                     
-                    -- Tìm server có boss
+                    -- Tìm server có boss (KHÔNG GIỚI HẠN SỐ NGƯỜI)
                     local currentJobId = game.JobId
                     local currentPlaceId = game.PlaceId
                     local bestServer = nil
                     local bestScore = -1
                     
                     for _, server in pairs(allServers) do
-                        if type(server) == "table" and server.JobId and server.PlaceId and server.ServerOsTime and server.GetPlayers then
-                            if server.PlaceId == currentPlaceId and server.JobId ~= currentJobId and server.GetPlayers > 0 and server.GetPlayers < 13 then
+                        if type(server) == "table" and server.JobId and server.PlaceId and server.ServerOsTime then
+                            if server.PlaceId == currentPlaceId and server.JobId ~= currentJobId and server.GetPlayers > 0 then
                                 local uptime = os.time() - server.ServerOsTime
                                 local h = math.floor(uptime / 3600)
                                 local m = math.floor((uptime % 3600) / 60)
@@ -690,11 +690,13 @@ sTab:AddToggle({
                                     score = score + 100
                                 end
                                 
-                                -- Ưu tiên server ít người chơi
+                                -- Ưu tiên server ít người chơi hơn (nhưng vẫn nhận server đông)
                                 if server.GetPlayers < 8 then
                                     score = score + 50
-                                elseif server.GetPlayers < 10 then
+                                elseif server.GetPlayers < 12 then
                                     score = score + 25
+                                elseif server.GetPlayers < 20 then
+                                    score = score + 10
                                 end
                                 
                                 if score > bestScore then
@@ -707,7 +709,7 @@ sTab:AddToggle({
                     
                     -- Nếu tìm thấy server, spam hop
                     if bestServer then
-                        print(string.format("🎯 TÌM THẤY! %d người chơi", bestServer.GetPlayers))
+                        print(string.format("🎯 TÌM THẤY! %d/%d người chơi", bestServer.GetPlayers, bestServer.MaxPlayers or "?"))
                         print("🚀 ĐANG HOP...")
                         
                         -- Spam hop liên tục đến khi thành công
