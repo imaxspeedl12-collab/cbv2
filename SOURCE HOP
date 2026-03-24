@@ -199,7 +199,7 @@ end
 
 combinedData = {
     Settings = {
-        autoDeleteEffects = false,
+        autoDeleteEffects = true,
         teleraid = false,
         start = true,
         opeskill = true,
@@ -225,7 +225,7 @@ combinedData = {
         autoskhd = true,
         autoskillsea = true,
         autoskhdhop = true,
-        autocat = false,
+        autocat = true,
         HopThreshold = 70,
         dropfruit = false
     }
