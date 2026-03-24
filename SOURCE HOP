@@ -643,91 +643,109 @@ sTab:AddToggle({
                     end
                     
                     -- ===== KHÔNG CÒN BOSS → TÌM SERVER MỚI =====
-                    print("🔁 Không còn boss, lấy danh sách server...")
+                    print("🔁 Không còn boss, quét server...")
                     
-                    -- Lấy tất cả server 1 lần duy nhất
-                    local success, allServers = pcall(function()
-                        return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("GetServers"):InvokeServer()
-                    end)
+                    -- Quét nhiều page để lấy hết server
+                    local allServers = {}
+                    local seenJobIds = {}
+                    local page = 1
+                    local emptyCount = 0
+                    local MAX_EMPTY = 3
                     
-                    if not success or not allServers then
-                        print("❌ Không lấy được server, đợi 2s...")
-                        task.wait(2)
-                        continue
+                    while emptyCount < MAX_EMPTY do
+                        local success, servers = pcall(function()
+                            return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer({ page = page })
+                        end)
+                        
+                        if not success or not servers or #servers == 0 then
+                            emptyCount = emptyCount + 1
+                            if emptyCount == 1 then
+                                print("   📭 Bắt đầu gặp page rỗng...")
+                            end
+                        else
+                            emptyCount = 0
+                            for _, s in ipairs(servers) do
+                                if s.JobId and not seenJobIds[s.JobId] then
+                                    seenJobIds[s.JobId] = true
+                                    table.insert(allServers, s)
+                                end
+                            end
+                            if page % 10 == 0 then
+                                print("   Page " .. page .. ": " .. #allServers .. " server")
+                            end
+                        end
+                        
+                        page = page + 1
+                        task.wait(0.05)
                     end
                     
-                    print(string.format("📊 Đã lấy %d server", #allServers))
+                    print(string.format("📊 Tổng server: %d", #allServers))
                     
-                    -- Tìm server có boss (KHÔNG GIỚI HẠN SỐ NGƯỜI)
+                    -- ===== LỌC SERVER THEO KHUNG GIỜ BOSS (GIỮ NGUYÊN LOGIC GROUP) =====
+                    local validServers = {
+                        group1 = {}, group2 = {}, group3 = {}, group4 = {}, group5 = {},
+                        group6 = {}, group7 = {}, group8 = {}, group9 = {}, group10 = {},
+                        group11 = {}, group12 = {}
+                    }
                     local currentJobId = game.JobId
                     local currentPlaceId = game.PlaceId
-                    local bestServer = nil
-                    local bestScore = -1
                     
-                    for _, server in pairs(allServers) do
-                        if type(server) == "table" and server.JobId and server.PlaceId and server.ServerOsTime then
-                            if server.PlaceId == currentPlaceId and server.JobId ~= currentJobId and server.GetPlayers > 0 then
-                                local uptime = os.time() - server.ServerOsTime
-                                local h = math.floor(uptime / 3600)
-                                local m = math.floor((uptime % 3600) / 60)
-                                
-                                -- Tính điểm ưu tiên dựa trên khung giờ boss
-                                local score = 0
-                                
-                                -- Khung giờ Hydra/Sea King
-                                if (h == 4 and m >= 21 and m <= 30) or
-                                   (h == 8 and m >= 52 and m <= 59) or (h == 9 and m <= 1) or
-                                   (h == 0 and m >= 59 and m <= 67) or
-                                   (h == 2 and m >= 7 and m <= 14) or
-                                   (h == 3 and m >= 14 and m <= 21) or
-                                   (h == 5 and m >= 31 and m <= 37) or
-                                   (h == 13 and m >= 28 and m <= 35) or
-                                   (h == 18 and m >= 10 and m <= 17) or
-                                   (h == 7 and m >= 45 and m <= 52) or
-                                   (h == 6 and m >= 38 and m <= 45) or
-                                   (h == 10 and m >= 3 and m <= 9) or
-                                   (h == 11 and m >= 11 and m <= 17) then
-                                    score = score + 100
-                                end
-                                
-                                -- Ưu tiên server ít người chơi hơn (nhưng vẫn nhận server đông)
-                                if server.GetPlayers < 8 then
-                                    score = score + 50
-                                elseif server.GetPlayers < 12 then
-                                    score = score + 25
-                                elseif server.GetPlayers < 20 then
-                                    score = score + 10
-                                end
-                                
-                                if score > bestScore then
-                                    bestScore = score
-                                    bestServer = server
-                                end
+                    for _, server in ipairs(allServers) do
+                        if server.JobId and server.PlaceId == currentPlaceId and server.JobId ~= currentJobId and server.CreatedAt and server.PlayerCount then
+                            local uptime = os.time() - server.CreatedAt
+                            
+                            -- 12 khung giờ boss
+                            if uptime >= 4*3600 + 21*60 and uptime <= 4*3600 + 30*60 then
+                                table.insert(validServers.group1, server)
+                            elseif uptime >= 8*3600 + 52*60 and uptime <= 9*3600 + 1*60 then
+                                table.insert(validServers.group2, server)
+                            elseif uptime >= 59*60 + 1 and uptime <= 1*3600 + 7*60 then
+                                table.insert(validServers.group3, server)
+                            elseif uptime >= 2*3600 + 7*60 and uptime <= 2*3600 + 14*60 then
+                                table.insert(validServers.group4, server)
+                            elseif uptime >= 3*3600 + 14*60 and uptime <= 3*3600 + 21*60 then
+                                table.insert(validServers.group5, server)
+                            elseif uptime >= 5*3600 + 31*60 and uptime <= 5*3600 + 37*60 then
+                                table.insert(validServers.group6, server)
+                            elseif uptime >= 13*3600 + 28*60 and uptime <= 13*3600 + 35*60 then
+                                table.insert(validServers.group7, server)
+                            elseif uptime >= 18*3600 + 10*60 and uptime <= 18*3600 + 17*60 then
+                                table.insert(validServers.group8, server)
+                            elseif uptime >= 7*3600 + 45*60 and uptime <= 7*3600 + 52*60 then
+                                table.insert(validServers.group9, server)
+                            elseif uptime >= 6*3600 + 38*60 and uptime <= 6*3600 + 45*60 then
+                                table.insert(validServers.group10, server)
+                            elseif uptime >= 10*3600 + 3*60 and uptime <= 10*3600 + 9*60 then
+                                table.insert(validServers.group11, server)
+                            elseif uptime >= 11*3600 + 11*60 and uptime <= 11*3600 + 17*60 then
+                                table.insert(validServers.group12, server)
                             end
                         end
                     end
                     
-                    -- Nếu tìm thấy server, spam hop
-                    if bestServer then
-                        print(string.format("🎯 TÌM THẤY! %d/%d người chơi", bestServer.GetPlayers, bestServer.MaxPlayers or "?"))
-                        print("🚀 ĐANG HOP...")
-                        
-                        -- Spam hop liên tục đến khi thành công
-                        local hopSuccess = false
-                        while not hopSuccess and getgenv().SeaKinghop do
-                            hopSuccess = pcall(function()
-                                TeleportService:TeleportToPlaceInstance(bestServer.PlaceId, bestServer.JobId, game.Players.LocalPlayer)
-                            end)
-                            if not hopSuccess then
-                                print("⚠️ Hop thất bại, thử lại sau 0.5s...")
-                                task.wait(0.5)
-                            end
-                        end
-                        
-                        if hopSuccess then
-                            getgenv().SeaKinghop = false
+                    -- Chọn group ưu tiên cao nhất có server
+                    local priorityGroups = {"group1", "group2", "group3", "group4", "group5", "group6", "group7", "group8", "group9", "group10", "group11", "group12"}
+                    local selectedServer = nil
+                    
+                    for _, group in ipairs(priorityGroups) do
+                        if #validServers[group] > 0 then
+                            selectedServer = validServers[group][math.random(#validServers[group])]
+                            print(string.format("🎯 TÌM THẤY! Group %s | %d server", group, #validServers[group]))
                             break
                         end
+                    end
+                    
+                    -- Hop nếu tìm thấy
+                    if selectedServer then
+                        local uptime = os.time() - selectedServer.CreatedAt
+                        local h = math.floor(uptime / 3600)
+                        local m = math.floor((uptime % 3600) / 60)
+                        print(string.format("   Uptime: %dh%02dm | %d/12 người", h, m, selectedServer.PlayerCount))
+                        print("🚀 ĐANG HOP...")
+                        
+                        TeleportService:TeleportToPlaceInstance(selectedServer.PlaceId, selectedServer.JobId, game.Players.LocalPlayer)
+                        getgenv().SeaKinghop = false
+                        break
                     else
                         print("❌ Không tìm thấy server có boss, đợi 5s rồi thử lại...")
                         task.wait(5)
