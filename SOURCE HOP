@@ -608,7 +608,7 @@ local function findValidServer()
     end
     
     math.randomseed(tick())
-    local priorityGroups = { "group1", "group2", "group3", "group4" ,"group5","group6","group7","group8","group9","group10","group11","group12"}
+    local priorityGroups = { "group2", "group3", "group1", "group4" ,"group5","group6","group7","group8","group9","group10","group11","group12"}
     for _, group in ipairs(priorityGroups) do
         if #validServers[group] > 0 then
             return validServers[group][math.random(#validServers[group])]
