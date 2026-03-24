@@ -560,7 +560,7 @@ local function removeOldestServer()
     end)
 end
 
--- ===== AUTO HOP MỚI (KIỂM TRA ĐẦY ĐỦ RƯƠNG) =====
+-- ===== AUTO HOP (THỬ NHIỀU SERVER KHI FULL) =====
 sTab:AddToggle({
     Name = "Auto Hop Thông Minh | Beta (Sea King, Hydra)",
     Default = Settings.autoskhdhop,
@@ -589,7 +589,6 @@ sTab:AddToggle({
                         for _, name in ipairs({"Sea King Thunder", "Sea King Water", "Sea King Lava"}) do
                             local island = workspaceIsland:FindFirstChild(name)
                             if island then
-                                -- Kiểm tra HydraStand (rương Hydra ở đây)
                                 if island:FindFirstChild("HydraStand") then
                                     for _, chest in ipairs(island:GetChildren()) do
                                         if chest:IsA("Model") and chest.Name:match("Chest") then
@@ -598,7 +597,6 @@ sTab:AddToggle({
                                         end
                                     end
                                 end
-                                -- Kiểm tra trực tiếp rương trong đảo
                                 for _, chest in ipairs(island:GetChildren()) do
                                     if chest:IsA("Model") and chest.Name:match("Chest") then
                                         hasHydraChest = true
@@ -610,7 +608,7 @@ sTab:AddToggle({
                         end
                     end
                     
-                    -- ===== KIỂM TRA RƯƠNG SEA KING (ChestSpawner) =====
+                    -- ===== KIỂM TRA RƯƠNG SEA KING =====
                     local hasSeaKingChest = false
                     if workspaceIsland then
                         for _, islandName in ipairs({"Legacy Island1", "Legacy Island2", "Legacy Island3", "Legacy Island4"}) do
@@ -630,8 +628,7 @@ sTab:AddToggle({
                     -- ===== KIỂM TRA RƯƠNG GHOST SHIP =====
                     local hasGhostShipChest = false
                     for i = 1, 5 do
-                        local chest = workspace:FindFirstChild("Chest" .. i)
-                        if chest and chest:FindFirstChild("Top") then
+                        if workspace:FindFirstChild("Chest" .. i) then
                             hasGhostShipChest = true
                             break
                         end
@@ -642,39 +639,31 @@ sTab:AddToggle({
                         print("   Còn boss, không hop")
                         task.wait(5)
                     elseif hasHydraChest or hasSeaKingChest or hasGhostShipChest then
-                        print("   Còn rương (Hydra:", hasHydraChest, "SeaKing:", hasSeaKingChest, "Ghost:", hasGhostShipChest, ") đợi nhặt...")
+                        print("   Còn rương, đợi nhặt...")
                         task.wait(5)
                     else
-                        -- Không còn boss, không còn rương → tìm server mới
-                        print("   Không còn boss và rương, tìm server mới...")
+                        print("   🚀 KHÔNG CÒN BOSS VÀ RƯƠNG, TÌM SERVER MỚI!")
                         
                         local MAX_PAGE = 200
                         local currentJobId = game.JobId
                         local currentPlaceId = game.PlaceId
                         local page = 1
                         local found = false
-                        local scanned = 0
-                        local triedServers = {}
+                        local candidates = {}
                         
-                        while page <= MAX_PAGE and not found do
+                        -- Quét tất cả server có boss
+                        while page <= MAX_PAGE do
                             local success, servers = pcall(function()
                                 return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer({ page = page })
                             end)
                             if not success or not servers then break end
-                            
-                            scanned = scanned + #servers
-                            if page % 20 == 0 then
-                                print("   Đã quét " .. page .. " page (" .. scanned .. " server)")
-                            end
                             
                             for _, s in ipairs(servers) do
                                 if s.JobId and s.JobId ~= currentJobId and s.PlaceId == currentPlaceId and s.CreatedAt and s.PlayerCount then
                                     local uptime = os.time() - s.CreatedAt
                                     local h = math.floor(uptime / 3600)
                                     local m = math.floor((uptime % 3600) / 60)
-                                    local players = s.PlayerCount
                                     
-                                    local isBossTime = false
                                     if (h == 4 and m >= 21 and m <= 30) or
                                        (h == 8 and m >= 52 and m <= 59) or (h == 9 and m <= 1) or
                                        (h == 0 and m >= 59 and m <= 67) or
@@ -687,25 +676,14 @@ sTab:AddToggle({
                                        (h == 6 and m >= 38 and m <= 45) or
                                        (h == 10 and m >= 3 and m <= 9) or
                                        (h == 11 and m >= 11 and m <= 17) then
-                                        isBossTime = true
-                                    end
-                                    
-                                    if isBossTime and players < 12 and not triedServers[s.JobId] then
-                                        print(string.format("🎯 TÌM THẤY! %dh%02dm | %d/12 người", h, m, players))
-                                        print("🚀 ĐANG HOP...")
                                         
-                                        local hopSuccess, hopErr = pcall(function()
-                                            TeleportService:TeleportToPlaceInstance(s.PlaceId, s.JobId, game.Players.LocalPlayer)
-                                        end)
-                                        
-                                        if hopSuccess then
-                                            print("✅ HOP THÀNH CÔNG!")
-                                            found = true
-                                            getgenv().SeaKinghop = false
-                                            break
-                                        else
-                                            print("⚠️ HOP THẤT BẠI, thử server khác...")
-                                            triedServers[s.JobId] = true
+                                        if s.PlayerCount < 12 then
+                                            table.insert(candidates, {
+                                                JobId = s.JobId,
+                                                PlaceId = s.PlaceId,
+                                                players = s.PlayerCount,
+                                                h = h, m = m
+                                            })
                                         end
                                     end
                                 end
@@ -714,9 +692,42 @@ sTab:AddToggle({
                             task.wait(0.03)
                         end
                         
-                        if not found then
+                        if #candidates > 0 then
+                            -- Sắp xếp theo số người ít nhất
+                            table.sort(candidates, function(a, b) return a.players < b.players end)
+                            
+                            -- THỬ TỪNG SERVER
+                            local hopSuccess = false
+                            for _, c in ipairs(candidates) do
+                                print(string.format("🎯 THỬ SERVER: %dh%02dm | %d/12", c.h, c.m, c.players))
+                                
+                                local success, err = pcall(function()
+                                    TeleportService:TeleportToPlaceInstance(c.PlaceId, c.JobId, game.Players.LocalPlayer)
+                                end)
+                                
+                                if success then
+                                    print("✅ HOP THÀNH CÔNG!")
+                                    hopSuccess = true
+                                    break
+                                else
+                                    print("⚠️ HOP THẤT BẠI (có thể full), thử server tiếp theo...")
+                                end
+                                task.wait(1)
+                            end
+                            
+                            if hopSuccess then
+                                getgenv().SeaKinghop = false
+                                break
+                            else
+                                print("❌ TẤT CẢ SERVER ĐỀU KHÔNG HOP ĐƯỢC, ĐỢI 30 GIÂY...")
+                                for i = 1, 30 do
+                                    if not getgenv().SeaKinghop then break end
+                                    task.wait(1)
+                                end
+                            end
+                        else
                             print("❌ Không tìm thấy server có boss, đợi 30 giây...")
-                            for i = 30, 1, -1 do
+                            for i = 1, 30 do
                                 if not getgenv().SeaKinghop then break end
                                 task.wait(1)
                             end
