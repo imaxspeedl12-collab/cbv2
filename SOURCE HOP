@@ -650,12 +650,11 @@ sTab:AddToggle({
         SaveSettings()
         
         if value then
-            -- Lưu gem/beli gốc khi bật toggle
             local startGem = game.Players.LocalPlayer.PlayerStats.Gem.Value
             local startBeli = game.Players.LocalPlayer.PlayerStats.beli.Value
             local hasCollectedChest = false
-            local hasKilledBoss = false  -- 👈 THÊM: đã đánh boss chưa
-            local bossWasAlive = false   -- 👈 THÊM: boss đã từng sống chưa
+            local hasKilledBoss = false
+            local bossWasAlive = false
             
             spawn(function()
                 while getgenv().SeaKinghop do
@@ -693,20 +692,17 @@ sTab:AddToggle({
                     
                     local hasBoss = (seaKing and skHealth > 0) or (hydra and hydraHealth > 0) or (gs and gsHealth > 0)
                     
-                    -- 👈 Nếu có boss, đánh dấu đã từng có boss
                     if hasBoss then
                         bossWasAlive = true
                     end
                     
-                    -- 👈 Nếu boss đã từng sống và bây giờ không còn boss → đã đánh xong
                     if bossWasAlive and not hasBoss then
                         hasKilledBoss = true
                         print("✅ Đã đánh xong boss!")
                     end
                     
-                    -- ===== KIỂM TRA CÒN RƯƠNG =====
+                    -- ===== KIỂM TRA RƯƠNG =====
                     local hasChest = false
-                    
                     for i = 1, 5 do
                         if Workspace:FindFirstChild("Chest" .. i) and Workspace["Chest" .. i]:FindFirstChild("Top") then
                             hasChest = true
@@ -754,36 +750,40 @@ sTab:AddToggle({
                     end
                     
                     -- ===== QUYẾT ĐỊNH HOP =====
-                    if hasBoss then
-                        print("⚔️ Còn boss, không hop")
-                        task.wait(5)
-                        continue
-                    end
                     
-                    if skSpawnTime < Settings.HopThreshold then
-                        print(string.format("🌊 Boss spawn sau %d giây", skSpawnTime))
-                        task.wait(5)
-                        continue
-                    end
-                    
-                    if gsSpawnTime < Settings.HopThreshold then
-                        print(string.format("⛵ Ghost Ship spawn sau %d giây", gsSpawnTime))
-                        task.wait(5)
-                        continue
-                    end
-                    
-                    -- 👈 CHỈ HOP KHI ĐÃ ĐÁNH BOSS XONG VÀ ĐÃ NHẶT RƯƠNG
+                    -- 1. Nếu đã đánh boss xong và đã nhặt rương (hoặc hết rương) → HOP
                     if hasKilledBoss and (hasCollectedChest or not hasChest) then
-                        print("🎯 Đã đánh boss và nhặt rương xong, bắt đầu tìm server mới...")
+                        print("🎯 Đã xong, bắt đầu tìm server mới...")
                         spamTeleport()
                         break
                     end
                     
-                    -- Nếu chưa có boss (server mới) thì đợi
-                    if not bossWasAlive then
-                        print("⏳ Chưa có boss, đợi spawn...")
-                    else
-                        print("📦 Đã đánh boss xong, đợi nhặt rương...")
+                    -- 2. Nếu chưa có boss và không có rương → HOP NGAY (không đợi)
+                    if not hasBoss and not hasChest and not bossWasAlive then
+                        print("🔁 Server chưa có boss, tìm server mới...")
+                        spamTeleport()
+                        break
+                    end
+                    
+                    -- 3. Nếu có boss → đánh boss
+                    if hasBoss then
+                        print("⚔️ Đang có boss, tiếp tục đánh...")
+                        task.wait(5)
+                        continue
+                    end
+                    
+                    -- 4. Nếu đã đánh boss xong nhưng chưa nhặt rương → đợi nhặt
+                    if hasKilledBoss and not hasCollectedChest and hasChest then
+                        print("📦 Chờ nhặt rương...")
+                        task.wait(3)
+                        continue
+                    end
+                    
+                    -- 5. Nếu boss sắp spawn → chờ
+                    if skSpawnTime < Settings.HopThreshold or gsSpawnTime < Settings.HopThreshold then
+                        print("⏳ Boss sắp spawn, chờ đánh...")
+                        task.wait(5)
+                        continue
                     end
                 end
             end)
