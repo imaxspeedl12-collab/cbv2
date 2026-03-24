@@ -702,34 +702,20 @@ sTab:AddToggle({
                         task.wait()
                     else
                         local hasSeaKing = false
-for _, islandName in ipairs({"Legacy Island1", "Legacy Island2", "Legacy Island3", "Legacy Island4"}) do
-    local island = workspaceIsland:FindFirstChild(islandName)
-    if island and island:FindFirstChild("ChestSpawner") then
-        -- Kiểm tra có rương thật không
-        for _, chest in ipairs(island.ChestSpawner:GetChildren()) do
-            if chest:IsA("Model") and chest.Name:match("Chest$") then
-                hasSeaKing = true
-                break
-            end
-        end
-    end
-    if hasSeaKing then break end
-end
+                        for _, islandName in ipairs({"Legacy Island1", "Legacy Island2", "Legacy Island3", "Legacy Island4"}) do
+                            local island = workspaceIsland:FindFirstChild(islandName)
+                            if island and island:FindFirstChild("ChestSpawner") then
+                                hasSeaKing = true
+                            end
+                        end
                         
-                       local hasHydraStand = false
-for _, name in ipairs({"Sea King Thunder", "Sea King Water", "Sea King Lava"}) do
-    local island = workspaceIsland:FindFirstChild(name)
-    if island then
-        -- Kiểm tra có rương thật trong đảo không
-        for _, chest in ipairs(island:GetChildren()) do
-            if chest:IsA("Model") and chest.Name:match("Chest$") then
-                hasHydraStand = true
-                break
-            end
-        end
-    end
-    if hasHydraStand then break end
-end
+                        local hasHydraStand = false
+                        for _, name in ipairs({"Sea King Thunder", "Sea King Water", "Sea King Lava"}) do
+                            local island = workspaceIsland:FindFirstChild(name)
+                            if island and island:FindFirstChild("HydraStand") then
+                                hasHydraStand = true
+                            end
+                        end
                         
                         local hasGhostShipChest = false
                         local ghostShipChest = Workspace:FindFirstChild("Chest1")
