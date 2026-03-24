@@ -618,16 +618,19 @@ local function findValidServer()
     return nil
 end
 
--- ===== HÀM TELEPORT (GIỮ NGUYÊN) =====
+-- 🏆 Hàm Teleport() mới (có trả về kết quả)
 local function Teleport()
     local selectedServer = findValidServer()
     if selectedServer then
+        print(string.format("🎯 TÌM THẤY! HOP VÀO: %s", selectedServer.JobId))
         saveTeleportedServers(selectedServer.JobId)
         th.New("Đang Tìm Server")
         TeleportService:TeleportToPlaceInstance(selectedServer.PlaceId, selectedServer.JobId, game.Players.LocalPlayer)
+        return true
     else
         removeOldestServer()
         th.New("Đang Tìm Server Nâng Cao",5)
+        return false
     end
 end
 
