@@ -576,7 +576,7 @@ local function findValidServer()
     local currentPlaceId = game.PlaceId
     
     for _, server in ipairs(servers) do
-        if server.JobId and server.PlaceId == currentPlaceId and server.JobId ~= currentJobId and server.CreatedAt and server.PlayerCount then
+        if server.JobId and server.PlaceId == currentPlaceId and server.JobId ~= currentJobId and server.CreatedAt and server.PlayerCount and server.PlayerCount < 12 then
             local uptime = os.time() - server.CreatedAt
             
             if uptime >= 4 * 3600 + 21 * 60 and uptime <= 4 * 3600 + 30 * 60 then
