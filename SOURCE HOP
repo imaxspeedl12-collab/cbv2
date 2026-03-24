@@ -579,30 +579,30 @@ local function findValidServer()
         if server.JobId and server.PlaceId == currentPlaceId and server.JobId ~= currentJobId and server.CreatedAt and server.PlayerCount and server.PlayerCount < 12 then
             local uptime = os.time() - server.CreatedAt
             
-            if uptime >= 4 * 3600 + 21 * 60 and uptime <= 4 * 3600 + 30 * 60 then
-                table.insert(validServers.group1, server) 
-            elseif uptime >= 8 * 3600 + 52 * 60 and uptime <= 9 * 3600 + 1 * 60 then
-                table.insert(validServers.group2, server)
-            elseif uptime >= 59 * 60 + 1 and uptime <= 1 * 3600 + 7 * 60 then
-                table.insert(validServers.group3, server)
-            elseif uptime >= 2 * 3600 + 7 * 60 and uptime <= 2 * 3600 + 14 * 60 then
-                table.insert(validServers.group4, server)
-            elseif uptime >= 3 * 3600 + 14 * 60 and uptime <= 3 * 3600 + 21 * 60 then
-                table.insert(validServers.group5, server)
-            elseif uptime >= 5 * 3600 + 31 * 60 and uptime <= 5 * 3600 + 37 * 60 then
-                table.insert(validServers.group6, server)
-            elseif uptime >= 13 * 3600 + 28 * 60 and uptime <= 13 * 3600 + 35 * 60 then
-                table.insert(validServers.group7, server)
-            elseif uptime >= 18 * 3600 + 10 * 60 and uptime <= 18 * 3600 + 17 * 60 then
-                table.insert(validServers.group8, server)
-            elseif uptime >= 7 * 3600 + 45 * 60 and uptime <= 7 * 3600 + 52 * 60 then
-                table.insert(validServers.group9, server)
-            elseif uptime >= 6 * 3600 + 38 * 60 and uptime <= 6 * 3600 + 45 * 60 then
-                table.insert(validServers.group10, server)
-            elseif uptime >= 10 * 3600 + 3 * 60 and uptime <= 10 * 3600 + 9 * 60 then
-                table.insert(validServers.group11, server)
-            elseif uptime >= 11 * 3600 + 11 * 60 and uptime <= 11 * 3600 + 17 * 60 then
-                table.insert(validServers.group12, server)
+            if uptime >= 4 * 3600 + 21 * 60 and uptime <= 4 * 3600 + 30 * 60 and server.PlayerCount < 12 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 8 * 3600 + 52 * 60 and uptime <= 9 * 3600 + 1 * 60 and server.PlayerCount < 12 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 59 * 60 + 1 and uptime <= 1 * 3600 + 7 * 60 and server.PlayerCount < 12 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 2 * 3600 + 7 * 60 and uptime <= 2 * 3600 + 14 * 60 and server.PlayerCount < 12 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 3 * 3600 + 14 * 60 and uptime <= 3 * 3600 + 21 * 60 and server.PlayerCount < 12 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 5 * 3600 + 31 * 60 and uptime <= 5 * 3600 + 37 * 60 and server.PlayerCount < 12 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 13 * 3600 + 28 * 60 and uptime <= 13 * 3600 + 35 * 60 and server.PlayerCount < 12 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 18 * 3600 + 10 * 60 and uptime <= 18 * 3600 + 17 * 60 and server.PlayerCount < 12 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 7 * 3600 + 45 * 60 and uptime <= 7 * 3600 + 52 * 60 and server.PlayerCount < 12 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 6 * 3600 + 38 * 60 and uptime <= 6 * 3600 + 45 * 60 and server.PlayerCount < 12 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 10 * 3600 + 3 * 60 and uptime <= 10 * 3600 + 9 * 60 and server.PlayerCount < 12 then
+    table.insert(validServers.group1, server)
+            elseif uptime >= 11 * 3600 + 11 * 60 and uptime <= 11 * 3600 + 17 * 60 and server.PlayerCount < 12 then
+    table.insert(validServers.group1, server)
             end
         end
     end
