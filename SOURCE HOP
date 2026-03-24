@@ -571,91 +571,84 @@ sTab:AddToggle({
         if value then
             spawn(function()
                 while getgenv().SeaKinghop do
-                    task.wait(2) -- Kiểm tra mỗi 2 giây
+                    print("🔄 Auto Hop: đang kiểm tra boss và rương...")
                     
-                    -- ===== KIỂM TRA BOSS =====
+                    -- Kiểm tra boss
                     local seaKing = workspace.SeaMonster:FindFirstChild("SeaKing")
                     local hydra = workspace.SeaMonster:FindFirstChild("HydraSeaKing")
                     local gs = workspace.GhostMonster:FindFirstChild("Ghost Ship")
-                    
                     local skHealth = seaKing and seaKing:FindFirstChild("Humanoid") and seaKing.Humanoid.Health or 0
                     local hydraHealth = hydra and hydra:FindFirstChild("Humanoid") and hydra.Humanoid.Health or 0
                     local gsHealth = gs and gs:FindFirstChild("Humanoid") and gs.Humanoid.Health or 0
                     
-                    local hasBoss = (seaKing and skHealth > 0) or (hydra and hydraHealth > 0) or (gs and gsHealth > 0)
-                    
-                    if hasBoss then
-                        print("⚔️ Còn boss, không hop")
-                        continue -- Quay lại đầu vòng lặp
-                    end
-                    
                     -- ===== KIỂM TRA RƯƠNG THỰC TẾ =====
-                    local hasChest = false
+                    local hasHydraChest = false
                     local workspaceIsland = workspace:FindFirstChild("Island")
-                    
-                    -- Kiểm tra rương Ghost Ship (Chest1-5)
-                    for i = 1, 5 do
-                        local chest = workspace:FindFirstChild("Chest" .. i)
-                        if chest and chest:FindFirstChild("Top") then
-                            hasChest = true
-                            break
-                        end
-                    end
-                    
-                    -- Kiểm tra rương Hydra (trong đảo Sea King Thunder/Water/Lava)
-                    if not hasChest and workspaceIsland then
+                    if workspaceIsland then
                         for _, name in ipairs({"Sea King Thunder", "Sea King Water", "Sea King Lava"}) do
                             local island = workspaceIsland:FindFirstChild(name)
                             if island then
                                 for _, chest in ipairs(island:GetChildren()) do
                                     if chest:IsA("Model") and chest.Name:match("Chest") then
-                                        hasChest = true
+                                        hasHydraChest = true
                                         break
                                     end
                                 end
                             end
-                            if hasChest then break end
+                            if hasHydraChest then break end
                         end
                     end
                     
-                    -- Kiểm tra rương Sea King (trong ChestSpawner của Legacy Island)
-                    if not hasChest and workspaceIsland then
+                    local hasSeaKingChest = false
+                    if workspaceIsland then
                         for _, islandName in ipairs({"Legacy Island1", "Legacy Island2", "Legacy Island3", "Legacy Island4"}) do
                             local island = workspaceIsland:FindFirstChild(islandName)
                             if island and island:FindFirstChild("ChestSpawner") then
                                 for _, chest in ipairs(island.ChestSpawner:GetChildren()) do
                                     if chest:IsA("Model") and chest.Name:match("Chest") then
-                                        hasChest = true
+                                        hasSeaKingChest = true
                                         break
                                     end
                                 end
                             end
-                            if hasChest then break end
+                            if hasSeaKingChest then break end
                         end
                     end
                     
-                    -- ===== NẾU CÒN RƯƠNG, ĐỢI NHẶT =====
-                    if hasChest then
-                        print("📦 Còn rương, đợi nhặt trong " .. Settings.HopThreshold .. " giây...")
+                    local hasGhostShipChest = false
+                    for i = 1, 5 do
+                        local chest = workspace:FindFirstChild("Chest" .. i)
+                        if chest and chest:FindFirstChild("Top") then
+                            hasGhostShipChest = true
+                            break
+                        end
+                    end
+                    
+                    -- Nếu còn boss → không hop
+                    if (seaKing and skHealth > 0) or (hydra and hydraHealth > 0) or (gs and gsHealth > 0) then
+                        print("   Còn boss, không hop")
+                        task.wait(5)
+                    -- Nếu còn rương → đợi nhặt
+                    elseif hasHydraChest or hasSeaKingChest or hasGhostShipChest then
+                        print("   Còn rương (Hydra:", hasHydraChest, "SeaKing:", hasSeaKingChest, "Ghost:", hasGhostShipChest, ") đợi nhặt...")
                         
+                        -- Đợi nhặt rương trong HopThreshold giây
                         local startWait = tick()
                         local waitTime = Settings.HopThreshold
                         
                         while getgenv().SeaKinghop and (tick() - startWait) < waitTime do
                             task.wait(1)
                             
-                            -- Kiểm tra lại xem còn rương không (thoát sớm nếu hết)
+                            -- Kiểm tra xem còn rương không (thoát sớm nếu hết)
                             local stillHasChest = false
                             for i = 1, 5 do
-                                local chest = workspace:FindFirstChild("Chest" .. i)
-                                if chest and chest:FindFirstChild("Top") then
+                                if workspace:FindFirstChild("Chest" .. i) and workspace["Chest" .. i]:FindFirstChild("Top") then
                                     stillHasChest = true
                                     break
                                 end
                             end
-                            
                             if not stillHasChest then
-                                print("✅ Đã nhặt hết rương!")
+                                print("   ✅ Đã nhặt hết rương!")
                                 break
                             end
                         end
@@ -667,88 +660,102 @@ sTab:AddToggle({
                         local newHydraHealth = newHydra and newHydra:FindFirstChild("Humanoid") and newHydra.Humanoid.Health or 0
                         
                         if (newSeaKing and newSkHealth > 0) or (newHydra and newHydraHealth > 0) then
-                            print("⚠️ Boss vừa spawn, hủy hop!")
+                            print("   ⚠️ Boss vừa spawn, hủy hop!")
                             continue
                         end
-                    end
-                    
-                    -- ===== KIỂM TRA LẠI LẦN CUỐI TRƯỚC KHI HOP =====
-                    local finalSeaKing = workspace.SeaMonster:FindFirstChild("SeaKing")
-                    local finalHydra = workspace.SeaMonster:FindFirstChild("HydraSeaKing")
-                    local finalSkHealth = finalSeaKing and finalSeaKing:FindFirstChild("Humanoid") and finalSeaKing.Humanoid.Health or 0
-                    local finalHydraHealth = finalHydra and finalHydra:FindFirstChild("Humanoid") and finalHydra.Humanoid.Health or 0
-                    
-                    local finalHasChest = false
-                    for i = 1, 5 do
-                        if workspace:FindFirstChild("Chest" .. i) and workspace["Chest" .. i]:FindFirstChild("Top") then
-                            finalHasChest = true
-                            break
-                        end
-                    end
-                    
-                    if (finalSeaKing and finalSkHealth > 0) or (finalHydra and finalHydraHealth > 0) or finalHasChest then
-                        print("⚠️ Vẫn còn boss/rương, tiếp tục...")
-                        continue
-                    end
-                    
-                    -- ===== HOP NGAY LẬP TỨC (DÙNG CÁCH NHANH CỦA SOURCE CŨ) =====
-                    print("🔄 Không còn boss/rương, tìm server mới...")
-                    
-                    -- Lấy danh sách server nhanh (chỉ page 1)
-                    local success, servers = pcall(function()
-                        return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer({ page = 1 })
-                    end)
-                    
-                    if success and servers then
+                    else
+                        -- ===== KHÔNG CÒN BOSS VÀ RƯƠNG → TÌM SERVER MỚI =====
+                        print("   Không còn boss và rương, tìm server mới...")
+                        
+                        local MAX_PAGE = 200
                         local currentJobId = game.JobId
                         local currentPlaceId = game.PlaceId
+                        local page = 1
                         local found = false
+                        local scanned = 0
+                        local triedServers = {} -- Danh sách server đã thử hop (bị lỗi hoặc đầy)
                         
-                        for _, s in ipairs(servers) do
-                            if s.JobId and s.JobId ~= currentJobId and s.PlaceId == currentPlaceId and s.PlayerCount and s.PlayerCount < 12 then
-                                -- Kiểm tra khung giờ boss
-                                local uptime = os.time() - s.CreatedAt
-                                local h = math.floor(uptime / 3600)
-                                local m = math.floor((uptime % 3600) / 60)
+                        while page <= MAX_PAGE and not found and getgenv().SeaKinghop do
+                            local success, servers = pcall(function()
+                                return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer({ page = page })
+                            end)
+                            
+                            if not success or not servers then 
+                                print("   ⚠️ Không lấy được danh sách server page " .. page)
+                                break 
+                            end
+                            
+                            scanned = scanned + #servers
+                            if page % 20 == 0 then
+                                print("   Đã quét " .. page .. " page (" .. scanned .. " server)")
+                            end
+                            
+                            for _, s in ipairs(servers) do
+                                if not getgenv().SeaKinghop then break end
                                 
-                                local isBossTime = false
-                                if (h == 4 and m >= 21 and m <= 30) or
-                                   (h == 8 and m >= 52 and m <= 59) or (h == 9 and m <= 1) or
-                                   (h == 0 and m >= 59 and m <= 67) or
-                                   (h == 2 and m >= 7 and m <= 14) or
-                                   (h == 3 and m >= 14 and m <= 21) or
-                                   (h == 5 and m >= 31 and m <= 37) or
-                                   (h == 13 and m >= 28 and m <= 35) or
-                                   (h == 18 and m >= 10 and m <= 17) or
-                                   (h == 7 and m >= 45 and m <= 52) or
-                                   (h == 6 and m >= 38 and m <= 45) or
-                                   (h == 10 and m >= 3 and m <= 9) or
-                                   (h == 11 and m >= 11 and m <= 17) then
-                                    isBossTime = true
-                                end
-                                
-                                if isBossTime then
-                                    print(string.format("🎯 TÌM THẤY! %dh%02dm | %d/12 người", h, m, s.PlayerCount))
-                                    print("🚀 ĐANG HOP...")
+                                if s.JobId and s.JobId ~= currentJobId and s.PlaceId == currentPlaceId and s.CreatedAt and s.PlayerCount then
+                                    local uptime = os.time() - s.CreatedAt
+                                    local h = math.floor(uptime / 3600)
+                                    local m = math.floor((uptime % 3600) / 60)
+                                    local players = s.PlayerCount
                                     
-                                    TeleportService:TeleportToPlaceInstance(s.PlaceId, s.JobId, game.Players.LocalPlayer)
-                                    found = true
-                                    getgenv().SeaKinghop = false
-                                    break
+                                    -- Kiểm tra khung giờ boss
+                                    local isBossTime = false
+                                    if (h == 4 and m >= 21 and m <= 30) or
+                                       (h == 8 and m >= 52 and m <= 59) or (h == 9 and m <= 1) or
+                                       (h == 0 and m >= 59 and m <= 67) or
+                                       (h == 2 and m >= 7 and m <= 14) or
+                                       (h == 3 and m >= 14 and m <= 21) or
+                                       (h == 5 and m >= 31 and m <= 37) or
+                                       (h == 13 and m >= 28 and m <= 35) or
+                                       (h == 18 and m >= 10 and m <= 17) or
+                                       (h == 7 and m >= 45 and m <= 52) or
+                                       (h == 6 and m >= 38 and m <= 45) or
+                                       (h == 10 and m >= 3 and m <= 9) or
+                                       (h == 11 and m >= 11 and m <= 17) then
+                                        isBossTime = true
+                                    end
+                                    
+                                    -- Nếu đúng khung giờ và chưa thử server này
+                                    if isBossTime and players < 12 and not triedServers[s.JobId] then
+                                        print(string.format("🎯 TÌM THẤY! %dh%02dm | %d/12 người | Server: %s", h, m, players, s.JobId))
+                                        print("🚀 ĐANG HOP...")
+                                        
+                                        -- Thử hop, có xử lý lỗi
+                                        local hopSuccess = false
+                                        local hopError = nil
+                                        
+                                        pcall(function()
+                                            TeleportService:TeleportToPlaceInstance(s.PlaceId, s.JobId, game.Players.LocalPlayer)
+                                            hopSuccess = true
+                                        end)
+                                        
+                                        if hopSuccess then
+                                            print("✅ HOP THÀNH CÔNG!")
+                                            found = true
+                                            getgenv().SeaKinghop = false
+                                            break
+                                        else
+                                            -- Hop thất bại (server đầy, lỗi, v.v)
+                                            print("⚠️ HOP THẤT BẠI (có thể server đầy), thử server khác...")
+                                            triedServers[s.JobId] = true  -- Đánh dấu đã thử
+                                            th.New("⚠️ Hop thất bại, tìm server khác...", 2)
+                                        end
+                                    end
                                 end
                             end
+                            
+                            page = page + 1
+                            task.wait(0.03)
                         end
                         
-                        if not found then
+                        if not found and getgenv().SeaKinghop then
                             print("❌ Không tìm thấy server phù hợp, đợi 30 giây...")
-                            for i = 1, 30 do
+                            for i = 30, 1, -1 do
                                 if not getgenv().SeaKinghop then break end
                                 task.wait(1)
                             end
                         end
-                    else
-                        print("❌ Không thể lấy danh sách server, đợi 10 giây...")
-                        task.wait(10)
                     end
                 end
             end)
