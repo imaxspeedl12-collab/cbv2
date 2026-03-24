@@ -593,10 +593,9 @@ sTab:AddToggle({
         if value then
             spawn(function()
                 while getgenv().SeaKinghop do
-                    -- ===== LẤY THỜI GIAN SPAWN BOSS TỪ GUI =====
+                    -- ===== LẤY THỜI GIAN SPAWN BOSS =====
                     local MainGui = game.Players.LocalPlayer.PlayerGui.MainGui
                     local SecondSea = MainGui and MainGui.StarterFrame.LegacyPoseFrame.SecondSea
-                    
                     local skTimeLabel = SecondSea and SecondSea:FindFirstChild("SKTimeLabel")
                     local gsTimeLabel = SecondSea and SecondSea:FindFirstChild("GSTimeLabel")
                     
@@ -612,7 +611,7 @@ sTab:AddToggle({
                     local skSpawnTime = skTimeLabel and getSpawnSeconds(skTimeLabel.Text) or 9999
                     local gsSpawnTime = gsTimeLabel and getSpawnSeconds(gsTimeLabel.Text) or 9999
                     
-                    -- ===== KIỂM TRA BOSS HIỆN TẠI =====
+                    -- ===== KIỂM TRA BOSS =====
                     local seaKing = workspace.SeaMonster:FindFirstChild("SeaKing")
                     local hydra = workspace.SeaMonster:FindFirstChild("HydraSeaKing")
                     local gs = workspace.GhostMonster:FindFirstChild("Ghost Ship")
@@ -623,7 +622,6 @@ sTab:AddToggle({
                     
                     local hasBoss = (seaKing and skHealth > 0) or (hydra and hydraHealth > 0) or (gs and gsHealth > 0)
                     
-                    -- ===== QUYẾT ĐỊNH HOP =====
                     if hasBoss then
                         print("⚔️ Còn boss, không hop")
                         task.wait(5)
@@ -631,43 +629,39 @@ sTab:AddToggle({
                     end
                     
                     if skSpawnTime < Settings.HopThreshold then
-                        print(string.format("🌊 Hydra/Sea King spawn sau %d giây, chờ đánh", skSpawnTime))
+                        print(string.format("🌊 Boss spawn sau %d giây", skSpawnTime))
                         task.wait(5)
                         continue
                     end
                     
                     if gsSpawnTime < Settings.HopThreshold then
-                        print(string.format("⛵ Ghost Ship spawn sau %d giây, chờ đánh", gsSpawnTime))
+                        print(string.format("⛵ Ghost Ship spawn sau %d giây", gsSpawnTime))
                         task.wait(5)
                         continue
                     end
                     
-                    -- ===== KHÔNG CÒN BOSS → SPAM HOP LIÊN TỤC =====
-                    print("🔁 Bắt đầu spam hop...")
+                    -- ===== SPAM HOP =====
+                    print("🔁 Spam hop...")
                     
                     local attempt = 0
                     while getgenv().SeaKinghop do
                         attempt = attempt + 1
-                        print(string.format("   🔄 Lần thử #%d - Lấy server page 1...", attempt))
                         
                         local success, servers = pcall(function()
                             return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer({ page = 1 })
                         end)
                         
                         if not success or not servers then
-                            print("   ⚠️ Không lấy được server, thử lại...")
                             task.wait(0.2)
-                            goto next_attempt
+                            goto next
                         end
                         
-                        -- Lọc server có boss
-                        local bossServers = {}
                         local currentJobId = game.JobId
                         local currentPlaceId = game.PlaceId
                         
-                        for _, server in ipairs(servers) do
-                            if server.JobId and server.PlaceId == currentPlaceId and server.JobId ~= currentJobId and server.CreatedAt and server.PlayerCount then
-                                local uptime = os.time() - server.CreatedAt
+                        for _, s in ipairs(servers) do
+                            if s.JobId and s.PlaceId == currentPlaceId and s.JobId ~= currentJobId and s.CreatedAt and s.PlayerCount then
+                                local uptime = os.time() - s.CreatedAt
                                 local h = math.floor(uptime / 3600)
                                 local m = math.floor((uptime % 3600) / 60)
                                 
@@ -683,28 +677,22 @@ sTab:AddToggle({
                                    (h == 6 and m >= 38 and m <= 45) or
                                    (h == 10 and m >= 3 and m <= 9) or
                                    (h == 11 and m >= 11 and m <= 17) then
-                                    table.insert(bossServers, server)
+                                    
+                                    print(string.format("🎯 TÌM THẤY! %dh%02dm | %d/12 người", h, m, s.PlayerCount))
+                                    print("🚀 ĐANG HOP...")
+                                    TeleportService:TeleportToPlaceInstance(s.PlaceId, s.JobId, game.Players.LocalPlayer)
+                                    getgenv().SeaKinghop = false
+                                    return
                                 end
                             end
                         end
                         
-                        if #bossServers > 0 then
-                            local selected = bossServers[math.random(#bossServers)]
-                            local uptime = os.time() - selected.CreatedAt
-                            local h = math.floor(uptime / 3600)
-                            local m = math.floor((uptime % 3600) / 60)
-                            print(string.format("🎯 TÌM THẤY! %dh%02dm | %d/12 người", h, m, selected.PlayerCount))
-                            print("🚀 ĐANG HOP...")
-                            
-                            TeleportService:TeleportToPlaceInstance(selected.PlaceId, selected.JobId, game.Players.LocalPlayer)
-                            getgenv().SeaKinghop = false
-                            break
-                        else
-                            print(string.format("   📭 Lần %d: Không có server có boss", attempt))
+                        if attempt % 10 == 0 then
+                            print(string.format("   Đã thử %d lần, chưa tìm thấy...", attempt))
                         end
                         
-                        ::next_attempt::
-                        task.wait(0.2) -- Delay nhẹ giữa các lần thử
+                        ::next::
+                        task.wait(0.1)
                     end
                 end
             end)
