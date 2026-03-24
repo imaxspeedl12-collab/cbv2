@@ -372,13 +372,27 @@ sTab:AddToggle({
                     local player = game.Players.LocalPlayer
                     local skillAction = game:GetService("ReplicatedStorage").Chest.Remotes.Functions.SkillAction
                     
+                    -- Lấy boss
                     local skRoot = getBossRoot()
                     if not skRoot then return end
+                    
+                    -- Lấy vị trí boss
+                    local targetCFrame = skRoot.CFrame
+                    
+                    -- Nếu là Ghost Ship (Part ảo), cập nhật lại vị trí mới
+                    if skRoot.Name == "GhostShipTarget" then
+                        local ghostMonster = workspace:FindFirstChild("GhostMonster")
+                        local ghostShip = ghostMonster and ghostMonster:FindFirstChild("Ghost Ship")
+                        if ghostShip then
+                            targetCFrame = ghostShip:GetPivot()
+                            skRoot.CFrame = targetCFrame
+                        end
+                    end
 
                     local function sendSkill(toolName, prefix, skill)
                         local args = {
                             [1] = prefix.."_"..toolName.."_"..skill,
-                            [2] = {["MouseHit"] = skRoot.CFrame, ["Type"] = skill == "M1" and "Click" or "Down"}
+                            [2] = {["MouseHit"] = targetCFrame, ["Type"] = skill == "M1" and "Click" or "Down"}
                         }
                         skillAction:InvokeServer(unpack(args))
                         if skill ~= "M1" then
@@ -388,7 +402,10 @@ sTab:AddToggle({
                         end
                     end
 
+                    -- Kiểm tra Ope V2
                     local hasOpOp = player.Backpack:FindFirstChild("Kioru V2") ~= nil
+
+                    -- Quản lý Ope Room
                     local opeRoom = workspace:FindFirstChild("OpeRoom" .. player.Name)
                     if opeRoom then
                         local roomCFrame, roomSize = opeRoom.CFrame, opeRoom.Size
@@ -402,6 +419,7 @@ sTab:AddToggle({
                                     math.abs(bossPos.X - roomCFrame.Position.X) <= roomSize.X / 2 and
                                     math.abs(bossPos.Y - roomCFrame.Position.Y) <= roomSize.Y / 2 and
                                     math.abs(bossPos.Z - roomCFrame.Position.Z) <= roomSize.Z / 2
+                                
                                 if not isInside then
                                     bossOutsideCount = bossOutsideCount + 1
                                 end
@@ -423,6 +441,7 @@ sTab:AddToggle({
                         end)
                     end
 
+                    -- Sử dụng skill
                     if not hasOpOp then
                         local skills = {"M1", "Z", "X", "C", "V", "E"}
                         for _, tool in ipairs(player.Backpack:GetChildren()) do
@@ -440,6 +459,7 @@ sTab:AddToggle({
                     else
                         local opeSkills = {"X", "C", "V"}
                         local kioruSkills = {"M1", "Z", "X"}
+                        
                         for _, skill in ipairs(opeSkills) do
                             task.spawn(function() sendSkill("OpOp", "DF", skill) end)
                         end
@@ -452,7 +472,6 @@ sTab:AddToggle({
         end)
     end
 })
-
 getgenv().AutoSeaKing = false
 
 sTab:AddToggle({
@@ -479,7 +498,10 @@ sTab:AddToggle({
                     local hydraHealth = hydra and hydra:FindFirstChild("Humanoid") and hydra.Humanoid.Health or 0
                     local gsHealth = gs and gs:FindFirstChild("Humanoid") and gs.Humanoid.Health or 0
 
+                    -- Nếu tất cả boss đều chết hoặc không tồn tại
                     if (not seaKing or skHealth <= 0) and (not hydra or hydraHealth <= 0) and (not gs or gsHealth <= 0) then
+                        
+                        -- Dịch chuyển vào Hydra Stand
                         for _, name in ipairs({"Sea King Thunder", "Sea King Water", "Sea King Lava"}) do
                             local island = workspaceIsland:FindFirstChild(name)
                             if island and island:FindFirstChild("HydraStand") then
@@ -487,6 +509,7 @@ sTab:AddToggle({
                             end
                         end                     
 
+                        -- Dịch chuyển vào Sea King ChestSpawner
                         local legacyIslands = {"Legacy Island1", "Legacy Island2", "Legacy Island3", "Legacy Island4"}
                         for _, islandName in ipairs(legacyIslands) do
                             local island = workspaceIsland:FindFirstChild(islandName)
@@ -495,29 +518,28 @@ sTab:AddToggle({
                             end
                         end
 
-                        local totalChests = 0
-                        for i = 1, 5 do
-                            if workspace:FindFirstChild("Chest" .. i) then
-                                totalChests = totalChests + 1
-                            end
-                        end
-
-                        local collected = 0
+                        -- Nhặt rương Ghost Ship
                         for i = 1, 5 do
                             local chest = workspace:FindFirstChild("Chest" .. i)
                             if chest and chest:FindFirstChild("Top") then
                                 player.Character.HumanoidRootPart.CFrame = chest.Top.CFrame
                                 task.wait(0.3)
-                                collected = collected + 1
                             end
                         end
-
-                        if collected == totalChests then
-                            return
-                        end
                     else
-                        if getBossRoot() then
-                            player.Character.HumanoidRootPart.CFrame = getBossRoot().CFrame * CFrame.new(0, -10, 100)
+                        -- Còn boss, dịch chuyển đến boss
+                        local boss = getBossRoot()
+                        if boss then
+                            -- Nếu là Ghost Ship (Part ảo), lấy vị trí thật
+                            if boss.Name == "GhostShipTarget" then
+                                local ghostMonster = workspace:FindFirstChild("GhostMonster")
+                                local ghostShip = ghostMonster and ghostMonster:FindFirstChild("Ghost Ship")
+                                if ghostShip then
+                                    player.Character.HumanoidRootPart.CFrame = ghostShip:GetPivot() * CFrame.new(0, -10, 100)
+                                end
+                            else
+                                player.Character.HumanoidRootPart.CFrame = boss.CFrame * CFrame.new(0, -10, 100)
+                            end
                         end
                     end
                 end)
