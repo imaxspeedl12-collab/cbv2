@@ -681,17 +681,13 @@ sTab:AddToggle({
                     local skSpawnTime = skTimeLabel and ConvertTimeToSeconds(skTimeLabel.Text) or 9999
                     local gsSpawnTime = gsTimeLabel and ConvertTimeToSeconds(gsTimeLabel.Text) or 9999
                     
-                    -- ===== HÀM SPAM TELEPORT (KHÔNG BREAK) =====
+                    -- ===== HÀM SPAM TELEPORT =====
                     local function spamTeleport()
                         coroutine.wrap(function()
-                            local attempt = 0
                             while getgenv().SeaKinghop do
-                                attempt = attempt + 1
-                                print(string.format("🔄 Lần thử #%d - Đang tìm server...", attempt))
-                                
                                 local selectedServer = findValidServer()
                                 if selectedServer then
-                                    print(string.format("🎯 TÌM THẤY! HOP VÀO: %s", selectedServer.JobId))
+                                    print(string.format("🎯 HOP VÀO: %s", selectedServer.JobId))
                                     saveTeleportedServers(selectedServer.JobId)
                                     TeleportService:TeleportToPlaceInstance(selectedServer.PlaceId, selectedServer.JobId, game.Players.LocalPlayer)
                                     break
@@ -711,20 +707,17 @@ sTab:AddToggle({
                     -- ===== NẾU CÓ BOSS =====
                     if hasBoss then
                         hasKilledBoss = true
-                        print("⚔️ Đang có boss...")
                         task.wait(5)
                         continue
                     end
                     
                     -- ===== NẾU BOSS SẮP SPAWN =====
                     if skSpawnTime < Settings.HopThreshold then
-                        print(string.format("🌊 Boss spawn sau %d giây", skSpawnTime))
                         task.wait(5)
                         continue
                     end
                     
                     if gsSpawnTime < Settings.HopThreshold then
-                        print(string.format("⛵ Ghost Ship spawn sau %d giây", gsSpawnTime))
                         task.wait(5)
                         continue
                     end
@@ -735,112 +728,19 @@ sTab:AddToggle({
                         local currentBeli = PlayerStats.beli.Value
                         
                         if currentGem > startGem or currentBeli > startBeli then
-                            print(string.format("✅ Đã nhặt rương! Gem: %d → %d", startGem, currentGem))
-                            print("🎯 Tiến hành hop...")
+                            print(string.format("✅ Nhặt rương! Gem: %d → %d", startGem, currentGem))
                             spamTeleport()
-                            -- KHÔNG BREAK, để vòng lặp tiếp tục sau khi hop vào server mới
                         else
-                            print("📦 Boss chết nhưng chưa thấy rương, đợi 3 giây...")
                             task.wait(3)
                         end
                     else
-                        -- Server mới, không có boss → hop ngay
-                        print("🔁 Server không có boss, tìm server mới...")
                         spamTeleport()
-                        -- KHÔNG BREAK
                     end
                 end
             end)
         end
     end
 })
-sTab:AddSlider({
-    Name = "Thời gian Chờ GS+HD+SK (giây)",
-    Min = 0,
-    Max = 300,
-    Default = Settings.HopThreshold,
-    Increment = 5,
-    ValueName = "giây",
-    Callback = function(value)
-        Settings.HopThreshold = value
-        SaveSettings()
-    end
-})
-
-local player = game:GetService("Players").LocalPlayer
-local replicatedStorage = game:GetService("ReplicatedStorage")
-local fruitStorage = replicatedStorage:FindFirstChild("Chest") and replicatedStorage.Chest:FindFirstChild("Fruits")
-
-getgenv().AutoStoreFruit = false
-
-function ClickButton(path)
-    if path then
-        game:GetService("GuiService").SelectedObject = path
-        if game:GetService("GuiService").SelectedObject == path then
-            game:GetService("VirtualInputManager"):SendKeyEvent(true, 13, false, game)
-            task.wait()
-            game:GetService("VirtualInputManager"):SendKeyEvent(false, 13, false, game)
-        end
-        task.wait()
-        game:GetService("GuiService").SelectedObject = nil
-    end
-end
-
-local function EatFruit()
-    local character = player.Character
-    if not character then return end
-    local tool = character:FindFirstChildOfClass("Tool")
-    if tool then
-        pcall(function()
-            local button = game.Players.LocalPlayer.PlayerGui:FindFirstChild("EatFruitBecky") 
-                and game.Players.LocalPlayer.PlayerGui.EatFruitBecky:FindFirstChild("Dialogue") 
-                and player.PlayerGui.EatFruitBecky.Dialogue:FindFirstChild("Collect")
-            if button then
-                ClickButton(button)
-            end
-        end)
-    end
-end
-
-local function StoreFruit()
-    spawn(function()
-        while getgenv().AutoStoreFruit do
-            task.wait(.5)
-            local fruitStore = player.PlayerStats:FindFirstChild("FruitStore")
-            local fruitStorageLimit = player.PlayerStats:FindFirstChild("FruitStorage")
-            if not fruitStore or not fruitStorageLimit then
-                warn("Không tìm thấy FruitStore hoặc FruitStorage!")
-                return
-            end
-            local storedFruits = game:GetService("HttpService"):JSONDecode(fruitStore.Value)
-            local storageLimit = fruitStorageLimit.Value
-            local backpack = player:FindFirstChild("Backpack")
-            local character = player.Character
-            if not backpack or not character then return end
-            for _, fruit in ipairs(fruitStorage:GetChildren()) do
-                if not getgenv().AutoStoreFruit then return end
-                local fruitName = fruit.Name
-                local currentAmount = storedFruits[fruitName] or 0
-                if currentAmount < storageLimit then
-                    local foundFruit = backpack:FindFirstChild(fruitName)
-                    if foundFruit then
-                        foundFruit.Parent = character
-                        task.wait(0.5)
-                        game:GetService("VirtualUser"):ClickButton1(Vector2.new(300, 300))
-                        task.wait(1.5)
-                        EatFruit()
-                        game:GetService("VirtualUser"):ClickButton1(Vector2.new(300, 300))
-                        task.wait(1.5)
-                        local startTime = tick()
-                        while (backpack:FindFirstChild(fruitName) or character:FindFirstChild(fruitName)) and (tick() - startTime < 5) do
-                            task.wait(0.5)
-                        end
-                    end
-                end
-            end
-        end
-    end)
-end
 
 sTab:AddToggle({
     Name = "Auto Cất Fruit",
