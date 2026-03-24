@@ -682,102 +682,71 @@ sTab:AddToggle({
                             continue
                         end
                     else
-                        -- ===== QUÉT VÔ HẠN PAGE ĐẾN HẾT SERVER =====
-                        print("   🔁 Không còn boss/rương, bắt đầu quét toàn bộ server...")
+                        -- ===== LẤY DANH SÁCH SERVER (1 LẦN DUY NHẤT) =====
+                        print("   🔁 Không còn boss/rương, lấy danh sách server...")
                         
-                        local currentPlaceId = game.PlaceId
+                        local success, allServers = pcall(function()
+                            return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer()
+                        end)
+                        
+                        if not success or not allServers then
+                            print("   ❌ Không lấy được danh sách server, đợi 5 giây...")
+                            task.wait(5)
+                            continue
+                        end
+                        
+                        print(string.format("   📊 Đã lấy %d server", #allServers))
+                        
                         local currentJobId = game.JobId
-                        local page = 1
-                        local hopAttempts = 0
-                        local emptyPageCount = 0  -- Đếm số page trống liên tiếp
-                        local totalServersScanned = 0
-                        local maxEmptyPages = 5   -- Nếu 5 page liên tiếp không có server thì dừng
+                        local currentPlaceId = game.PlaceId
+                        local found = false
+                        local triedServers = {}
                         
-                        while getgenv().SeaKinghop do
-                            hopAttempts = hopAttempts + 1
+                        -- Duyệt tất cả server
+                        for _, s in ipairs(allServers) do
+                            if not getgenv().SeaKinghop then break end
                             
-                            -- In tiến độ mỗi 50 page
-                            if page % 50 == 0 then
-                                print(string.format("   📊 Đang quét page %d | Tổng server đã quét: %d", page, totalServersScanned))
-                            end
-                            
-                            local success, servers = pcall(function()
-                                return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer({ page = page })
-                            end)
-                            
-                            if not success or not servers then
-                                print(string.format("   ⚠️ Không lấy được server page %d", page))
-                                emptyPageCount = emptyPageCount + 1
-                                page = page + 1
-                                task.wait(0.2)
+                            if s.JobId and s.JobId ~= currentJobId and s.PlaceId == currentPlaceId and s.CreatedAt and s.PlayerCount then
+                                local uptime = os.time() - s.CreatedAt
+                                local h = math.floor(uptime / 3600)
+                                local m = math.floor((uptime % 3600) / 60)
+                                local players = s.PlayerCount
                                 
-                                -- Nếu quá nhiều page lỗi liên tiếp thì reset page
-                                if emptyPageCount >= maxEmptyPages then
-                                    print("   🔄 Quá nhiều page lỗi, quay lại page 1...")
-                                    page = 1
-                                    emptyPageCount = 0
+                                -- Kiểm tra khung giờ boss
+                                local isBossTime = false
+                                if (h == 4 and m >= 21 and m <= 30) or
+                                   (h == 8 and m >= 52 and m <= 59) or (h == 9 and m <= 1) or
+                                   (h == 0 and m >= 59 and m <= 67) or
+                                   (h == 2 and m >= 7 and m <= 14) or
+                                   (h == 3 and m >= 14 and m <= 21) or
+                                   (h == 5 and m >= 31 and m <= 37) or
+                                   (h == 13 and m >= 28 and m <= 35) or
+                                   (h == 18 and m >= 10 and m <= 17) or
+                                   (h == 7 and m >= 45 and m <= 52) or
+                                   (h == 6 and m >= 38 and m <= 45) or
+                                   (h == 10 and m >= 3 and m <= 9) or
+                                   (h == 11 and m >= 11 and m <= 17) then
+                                    isBossTime = true
                                 end
-                                continue
-                            end
-                            
-                            local serverCount = #servers
-                            totalServersScanned = totalServersScanned + serverCount
-                            
-                            -- Nếu page không có server nào
-                            if serverCount == 0 then
-                                emptyPageCount = emptyPageCount + 1
-                                print(string.format("   📭 Page %d: 0 server (đã %d page trống)", page, emptyPageCount))
                                 
-                                -- Nếu 10 page liên tiếp không có server → có thể đã hết server
-                                if emptyPageCount >= 10 then
-                                    print("   🔄 ĐÃ QUÉT HẾT SERVER! Quay lại page 1 để quét vòng mới...")
-                                    page = 1
-                                    emptyPageCount = 0
-                                    totalServersScanned = 0
-                                    task.wait(2)
-                                end
-                            else
-                                emptyPageCount = 0
-                                
-                                -- Duyệt server trong page
-                                for _, s in ipairs(servers) do
-                                    if not getgenv().SeaKinghop then break end
+                                if isBossTime and players < 12 and not triedServers[s.JobId] then
+                                    print(string.format("🎯 TÌM THẤY! %dh%02dm | %d/12 người", h, m, players))
+                                    print("🚀 ĐANG HOP...")
                                     
-                                    if s.JobId and s.JobId ~= currentJobId and s.PlaceId == currentPlaceId and s.CreatedAt and s.PlayerCount then
-                                        local uptime = os.time() - s.CreatedAt
-                                        local h = math.floor(uptime / 3600)
-                                        local m = math.floor((uptime % 3600) / 60)
-                                        
-                                        -- Kiểm tra khung giờ boss
-                                        local isBossTime = false
-                                        if (h == 4 and m >= 21 and m <= 30) or
-                                           (h == 8 and m >= 52 and m <= 59) or (h == 9 and m <= 1) or
-                                           (h == 0 and m >= 59 and m <= 67) or
-                                           (h == 2 and m >= 7 and m <= 14) or
-                                           (h == 3 and m >= 14 and m <= 21) or
-                                           (h == 5 and m >= 31 and m <= 37) or
-                                           (h == 13 and m >= 28 and m <= 35) or
-                                           (h == 18 and m >= 10 and m <= 17) or
-                                           (h == 7 and m >= 45 and m <= 52) or
-                                           (h == 6 and m >= 38 and m <= 45) or
-                                           (h == 10 and m >= 3 and m <= 9) or
-                                           (h == 11 and m >= 11 and m <= 17) then
-                                            isBossTime = true
-                                        end
-                                        
-                                        if isBossTime and s.PlayerCount < 12 then
-                                            print(string.format("🎯 TÌM THẤY! Page %d | %dh%02dm | %d/12 người", page, h, m, s.PlayerCount))
-                                            print("🚀 ĐANG HOP...")
-                                            
-                                            TeleportService:TeleportToPlaceInstance(s.PlaceId, s.JobId, game.Players.LocalPlayer)
-                                            task.wait(3)
-                                        end
-                                    end
+                                    TeleportService:TeleportToPlaceInstance(s.PlaceId, s.JobId, game.Players.LocalPlayer)
+                                    found = true
+                                    getgenv().SeaKinghop = false
+                                    break
                                 end
                             end
-                            
-                            page = page + 1
-                            task.wait(0.05)
+                        end
+                        
+                        if not found then
+                            print("❌ Không tìm thấy server phù hợp, đợi 30 giây...")
+                            for i = 1, 30 do
+                                if not getgenv().SeaKinghop then break end
+                                task.wait(1)
+                            end
                         end
                     end
                 end
