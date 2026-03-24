@@ -581,7 +581,7 @@ sTab:AddToggle({
                     local hydraHealth = hydra and hydra:FindFirstChild("Humanoid") and hydra.Humanoid.Health or 0
                     local gsHealth = gs and gs:FindFirstChild("Humanoid") and gs.Humanoid.Health or 0
                     
-                    -- ===== KIỂM TRA RƯƠNG THỰC TẾ =====
+                    -- ===== KIỂM TRA RƯƠNG =====
                     local hasHydraChest = false
                     local workspaceIsland = workspace:FindFirstChild("Island")
                     if workspaceIsland then
@@ -630,16 +630,13 @@ sTab:AddToggle({
                         task.wait(5)
                     -- Nếu còn rương → đợi nhặt
                     elseif hasHydraChest or hasSeaKingChest or hasGhostShipChest then
-                        print("   Còn rương (Hydra:", hasHydraChest, "SeaKing:", hasSeaKingChest, "Ghost:", hasGhostShipChest, ") đợi nhặt...")
+                        print("   Còn rương, đợi nhặt trong " .. Settings.HopThreshold .. " giây...")
                         
-                        -- Đợi nhặt rương trong HopThreshold giây
                         local startWait = tick()
                         local waitTime = Settings.HopThreshold
                         
                         while getgenv().SeaKinghop and (tick() - startWait) < waitTime do
                             task.wait(1)
-                            
-                            -- Kiểm tra xem còn rương không (thoát sớm nếu hết)
                             local stillHasChest = false
                             for i = 1, 5 do
                                 if workspace:FindFirstChild("Chest" .. i) and workspace["Chest" .. i]:FindFirstChild("Top") then
@@ -653,7 +650,6 @@ sTab:AddToggle({
                             end
                         end
                         
-                        -- Kiểm tra lại boss sau khi chờ
                         local newSeaKing = workspace.SeaMonster:FindFirstChild("SeaKing")
                         local newHydra = workspace.SeaMonster:FindFirstChild("HydraSeaKing")
                         local newSkHealth = newSeaKing and newSeaKing:FindFirstChild("Humanoid") and newSeaKing.Humanoid.Health or 0
@@ -664,31 +660,46 @@ sTab:AddToggle({
                             continue
                         end
                     else
-                        -- ===== KHÔNG CÒN BOSS VÀ RƯƠNG → TÌM SERVER MỚI =====
-                        print("   Không còn boss và rương, tìm server mới...")
+                        -- ===== SPAM HOP LIÊN TỤC, QUÉT VÒNG QUANH 200 PAGE =====
+                        print("   🔁 Không còn boss/rương, bắt đầu spam hop...")
                         
-                        local MAX_PAGE = 200
-                        local currentJobId = game.JobId
                         local currentPlaceId = game.PlaceId
+                        local currentJobId = game.JobId
+                        local MAX_PAGES = 200  -- Số page tối đa
                         local page = 1
-                        local found = false
-                        local scanned = 0
-                        local triedServers = {} -- Danh sách server đã thử hop (bị lỗi hoặc đầy)
+                        local hopAttempts = 0
+                        local scanRound = 1
                         
-                        while page <= MAX_PAGE and not found and getgenv().SeaKinghop do
+                        -- Vòng lặp spam hop vô hạn
+                        while getgenv().SeaKinghop do
+                            hopAttempts = hopAttempts + 1
+                            
+                            if page == 1 then
+                                print(string.format("   📍 [VÒNG %d] Bắt đầu quét 200 page...", scanRound))
+                            end
+                            
+                            if page % 50 == 0 then
+                                print(string.format("   📊 Đã quét %d/%d page (vòng %d)", page, MAX_PAGES, scanRound))
+                            end
+                            
                             local success, servers = pcall(function()
                                 return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer({ page = page })
                             end)
                             
-                            if not success or not servers then 
-                                print("   ⚠️ Không lấy được danh sách server page " .. page)
-                                break 
+                            if not success or not servers then
+                                print(string.format("   ⚠️ Không lấy được server page %d, chuyển sang page tiếp theo", page))
+                                page = page + 1
+                                if page > MAX_PAGES then
+                                    page = 1
+                                    scanRound = scanRound + 1
+                                    print(string.format("   🔄 ĐÃ QUÉT HẾT %d PAGE! BẮT ĐẦU VÒNG %d...", MAX_PAGES, scanRound))
+                                    task.wait(1)
+                                end
+                                task.wait(0.1)
+                                continue
                             end
                             
-                            scanned = scanned + #servers
-                            if page % 20 == 0 then
-                                print("   Đã quét " .. page .. " page (" .. scanned .. " server)")
-                            end
+                            local foundInPage = false
                             
                             for _, s in ipairs(servers) do
                                 if not getgenv().SeaKinghop then break end
@@ -697,7 +708,6 @@ sTab:AddToggle({
                                     local uptime = os.time() - s.CreatedAt
                                     local h = math.floor(uptime / 3600)
                                     local m = math.floor((uptime % 3600) / 60)
-                                    local players = s.PlayerCount
                                     
                                     -- Kiểm tra khung giờ boss
                                     local isBossTime = false
@@ -716,45 +726,35 @@ sTab:AddToggle({
                                         isBossTime = true
                                     end
                                     
-                                    -- Nếu đúng khung giờ và chưa thử server này
-                                    if isBossTime and players < 12 and not triedServers[s.JobId] then
-                                        print(string.format("🎯 TÌM THẤY! %dh%02dm | %d/12 người | Server: %s", h, m, players, s.JobId))
+                                    if isBossTime and s.PlayerCount < 12 then
+                                        foundInPage = true
+                                        print(string.format("🎯 [LẦN %d - PAGE %d] TÌM THẤY! %dh%02dm | %d/12 người", hopAttempts, page, h, m, s.PlayerCount))
                                         print("🚀 ĐANG HOP...")
                                         
-                                        -- Thử hop, có xử lý lỗi
-                                        local hopSuccess = false
-                                        local hopError = nil
+                                        -- Hop ngay lập tức
+                                        TeleportService:TeleportToPlaceInstance(s.PlaceId, s.JobId, game.Players.LocalPlayer)
                                         
-                                        pcall(function()
-                                            TeleportService:TeleportToPlaceInstance(s.PlaceId, s.JobId, game.Players.LocalPlayer)
-                                            hopSuccess = true
-                                        end)
-                                        
-                                        if hopSuccess then
-                                            print("✅ HOP THÀNH CÔNG!")
-                                            found = true
-                                            getgenv().SeaKinghop = false
-                                            break
-                                        else
-                                            -- Hop thất bại (server đầy, lỗi, v.v)
-                                            print("⚠️ HOP THẤT BẠI (có thể server đầy), thử server khác...")
-                                            triedServers[s.JobId] = true  -- Đánh dấu đã thử
-                                            th.New("⚠️ Hop thất bại, tìm server khác...", 2)
-                                        end
+                                        -- Đợi 5 giây để Roblox xử lý hop
+                                        -- Nếu hop thành công, game sẽ chuyển server và code dừng
+                                        -- Nếu hop thất bại (server full), tiếp tục spam
+                                        task.wait(5)
+                                        break
                                     end
                                 end
                             end
                             
+                            -- Chuyển sang page tiếp theo
                             page = page + 1
-                            task.wait(0.03)
-                        end
-                        
-                        if not found and getgenv().SeaKinghop then
-                            print("❌ Không tìm thấy server phù hợp, đợi 30 giây...")
-                            for i = 30, 1, -1 do
-                                if not getgenv().SeaKinghop then break end
-                                task.wait(1)
+                            
+                            -- Nếu quét hết 200 page thì quay lại page 1
+                            if page > MAX_PAGES then
+                                page = 1
+                                scanRound = scanRound + 1
+                                print(string.format("   🔄 ĐÃ QUÉT HẾT %d PAGE! BẮT ĐẦU VÒNG %d...", MAX_PAGES, scanRound))
+                                task.wait(1) -- Nghỉ 1 giây giữa các vòng
                             end
+                            
+                            task.wait(0.1) -- Delay nhẹ
                         end
                     end
                 end
