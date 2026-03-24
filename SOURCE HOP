@@ -634,76 +634,65 @@ sTab:AddToggle({
                         print(string.format("⛵ Ghost Ship spawn sau %d giây, không hop", gsSpawnTime))
                         task.wait(5)
                     else
-                        -- ===== SPAM HOP LIÊN TỤC =====
-                        local hopAttempts = 0
+                        print("🔁 Không có boss, lấy danh sách server...")
                         
-                        while getgenv().SeaKinghop do
-                            hopAttempts = hopAttempts + 1
-                            print(string.format("🔁 Lần thử #%d - Lấy danh sách server Sea 2...", hopAttempts))
+                        -- ===== QUAN TRỌNG: LẤY TẤT CẢ SERVER 1 LẦN (KHÔNG PAGE) =====
+                        local success, servers = pcall(function()
+                            return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer()
+                        end)
+                        
+                        if not success or not servers then
+                            print("❌ Không lấy được server, đợi 5s...")
+                            task.wait(5)
+                            continue
+                        end
+                        
+                        print(string.format("📊 Đã lấy %d server", #servers))
+                        
+                        local currentJobId = game.JobId
+                        local currentPlaceId = game.PlaceId
+                        local found = false
+                        
+                        -- Duyệt tất cả server (đã có sẵn trong 1 mảng)
+                        for _, s in ipairs(servers) do
+                            if not getgenv().SeaKinghop then break end
                             
-                            local success, servers = pcall(function()
-                                return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer({ page = 1 })
-                            end)
-                            
-                            if not success or not servers then
-                                print("❌ Không lấy được server, thử lại ngay...")
-                                continue
-                            end
-                            
-                            -- Lọc Sea 2
-                            local sea2Servers = {}
-                            for _, s in ipairs(servers) do
-                                if s.PlaceId == 6381829480 then
-                                    table.insert(sea2Servers, s)
-                                end
-                            end
-                            
-                            print(string.format("📊 Tổng %d server | Sea 2: %d server", #servers, #sea2Servers))
-                            
-                            local currentJobId = game.JobId
-                            local found = false
-                            
-                            for _, s in ipairs(sea2Servers) do
-                                if not getgenv().SeaKinghop then break end
+                            if s.JobId and s.JobId ~= currentJobId and s.PlaceId == currentPlaceId and s.PlayerCount and s.PlayerCount < 12 then
+                                local uptime = os.time() - (s.CreatedAt or 0)
+                                local h = math.floor(uptime / 3600)
+                                local m = math.floor((uptime % 3600) / 60)
                                 
-                                if s.JobId and s.JobId ~= currentJobId and s.PlayerCount and s.PlayerCount < 12 then
-                                    local uptime = os.time() - (s.CreatedAt or 0)
-                                    local h = math.floor(uptime / 3600)
-                                    local m = math.floor((uptime % 3600) / 60)
-                                    
-                                    local isBossTime = false
-                                    if (h == 4 and m >= 21 and m <= 30) or
-                                       (h == 8 and m >= 52 and m <= 59) or (h == 9 and m <= 1) or
-                                       (h == 0 and m >= 59 and m <= 67) or
-                                       (h == 2 and m >= 7 and m <= 14) or
-                                       (h == 3 and m >= 14 and m <= 21) or
-                                       (h == 5 and m >= 31 and m <= 37) or
-                                       (h == 13 and m >= 28 and m <= 35) or
-                                       (h == 18 and m >= 10 and m <= 17) or
-                                       (h == 7 and m >= 45 and m <= 52) or
-                                       (h == 6 and m >= 38 and m <= 45) or
-                                       (h == 10 and m >= 3 and m <= 9) or
-                                       (h == 11 and m >= 11 and m <= 17) then
-                                        isBossTime = true
-                                    end
-                                    
-                                    if isBossTime then
-                                        print(string.format("🎯 TÌM THẤY! %dh%02dm | %d/12 người", h, m, s.PlayerCount))
-                                        print("🚀 ĐANG HOP...")
-                                        TeleportService:TeleportToPlaceInstance(s.PlaceId, s.JobId, game.Players.LocalPlayer)
-                                        found = true
-                                        getgenv().SeaKinghop = false
-                                        break
-                                    end
+                                -- Kiểm tra khung giờ boss
+                                local isBossTime = false
+                                if (h == 4 and m >= 21 and m <= 30) or
+                                   (h == 8 and m >= 52 and m <= 59) or (h == 9 and m <= 1) or
+                                   (h == 0 and m >= 59 and m <= 67) or
+                                   (h == 2 and m >= 7 and m <= 14) or
+                                   (h == 3 and m >= 14 and m <= 21) or
+                                   (h == 5 and m >= 31 and m <= 37) or
+                                   (h == 13 and m >= 28 and m <= 35) or
+                                   (h == 18 and m >= 10 and m <= 17) or
+                                   (h == 7 and m >= 45 and m <= 52) or
+                                   (h == 6 and m >= 38 and m <= 45) or
+                                   (h == 10 and m >= 3 and m <= 9) or
+                                   (h == 11 and m >= 11 and m <= 17) then
+                                    isBossTime = true
+                                end
+                                
+                                if isBossTime then
+                                    print(string.format("🎯 TÌM THẤY! %dh%02dm | %d/12 người", h, m, s.PlayerCount))
+                                    print("🚀 ĐANG HOP...")
+                                    TeleportService:TeleportToPlaceInstance(s.PlaceId, s.JobId, game.Players.LocalPlayer)
+                                    found = true
+                                    getgenv().SeaKinghop = false
+                                    break
                                 end
                             end
-                            
-                            if found then
-                                break
-                            else
-                                print("❌ Chưa tìm thấy, thử lại ngay...")
-                                -- Không đợi, thử lại luôn
-                            end
+                        end
+                        
+                        if not found then
+                            print("❌ Không tìm thấy server có boss, đợi 10s...")
+                            task.wait(10)
                         end
                     end
                 end
