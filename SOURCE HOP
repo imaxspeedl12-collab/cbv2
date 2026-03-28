@@ -1,9 +1,10 @@
-print("CHANBAOV3")
+print("FUCK GHE MAY")
 local players = game:GetService("Players")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local lplr = game.Players.LocalPlayer
 
+local lastNotify = 0
 local name = lplr.Name
 local dname = lplr.DisplayName
 local workspace = game.Workspace 
@@ -23,6 +24,52 @@ end
 
 local StarterGui = game:GetService("StarterGui")
 local TeleportService = game:GetService("TeleportService")
+
+-- ===== LƯU SERVER ĐÃ ĂN RƯƠNG (RIÊNG TỪNG ACC) =====
+local collectedServers = {}
+local collectedFile = "collected_servers_" .. game.Players.LocalPlayer.UserId .. ".txt"
+
+if isfile(collectedFile) then
+    for line in string.gmatch(readfile(collectedFile), "[^\n]+") do
+        local jobId, time = line:match("([^|]+)|(.+)")
+        if jobId and time then collectedServers[jobId] = tonumber(time) end
+    end
+    local count = 0
+    for _ in pairs(collectedServers) do count = count + 1 end
+    print(string.format("📋 Đã load %d server đã ăn rương", count))
+end
+
+local function saveCollectedServer(jobId)
+        if not collectedServers[jobId] then
+                collectedServers[jobId] = os.time()
+        local list = {}
+        for id, t in pairs(collectedServers) do
+            table.insert(list, id .. "|" .. t)
+        end
+        local content = table.concat(list, "\n")
+                writefile(collectedFile, content)
+            else
+      end
+end
+
+local function removeExpiredServers()
+    local now = os.time()
+    local removed = false
+    for id, t in pairs(collectedServers) do
+        if now - t > 3480 then
+            collectedServers[id] = nil
+            removed = true
+        end
+    end
+    if removed then
+        local list = {}
+        for id, t in pairs(collectedServers) do
+            table.insert(list, id .. "|" .. t)
+        end
+        writefile(collectedFile, table.concat(list, "\n"))
+        print(string.format("🗑️ Đã xóa server cũ (quá 1 tiếng), còn %d server trong danh sách", table.getn(list)))
+    end
+end
 
 local player = players.LocalPlayer
 local TweenService = game:GetService("TweenService")
@@ -226,8 +273,9 @@ combinedData = {
         autoskillsea = true,
         autoskhdhop = true,
         autocat = true,
-        HopThreshold = 130,
-        dropfruit = false
+        HopThreshold = 200,
+        dropfruit = false,
+		autoHide = true,
     }
 }
 
@@ -297,11 +345,11 @@ local uptime = currentServer and (os.time() - currentServer.CreatedAt) or 0
 local serverName = currentServer and currentServer.Name or "Không xác định"
 local jobId = currentJobId
 
-local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/NamG2657/Scripting/refs/heads/main/OrionLib.lua?t=" .. os.time(), true))()
+local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/imaxspeedl12-collab/orionlib/refs/heads/main/orionlib", true))()
 
 local pe = game:GetService("Players").LocalPlayer.Name
 local Window = OrionLib:MakeWindow({
-    Name = "CHANBAOV3",
+    Name = "🌊 CHANBAO | UPDATE 10", 
     IntroEnabled = false,
     IntroText = "Welcome to CHANBAOV3, "..pe.."!",
     IntroIcon = "rbxassetid://6031094686",
@@ -311,6 +359,7 @@ local Window = OrionLib:MakeWindow({
 })
 
 function stop()
+    if isFlying then return end  -- 👈 KHÔNG LÀM GÌ KHI ĐANG BAY
     local root = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if root and not root:FindFirstChild("FreezeVelocity") then
         local freeze = Instance.new("BodyVelocity")
@@ -328,9 +377,153 @@ function ngungstop()
     end
 end
 
+-- ===== HÀM BAY LÊN TRỜI =====
+local flyHeight = 500000  -- ĐỘ CAO BAY
+local isFlying = false
+
+local function startFly()
+    if not getgenv().AutoHide then return end
+    if isFlying then return end
+    isFlying = true
+    
+    local player = game.Players.LocalPlayer
+    local character = player.Character
+    if not character then return end
+    
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character:FindFirstChild("Humanoid")
+    if not hrp or not humanoid then return end
+    
+    -- TELE LÊN CAO
+    hrp.CFrame = CFrame.new(hrp.Position.X, flyHeight, hrp.Position.Z)
+    
+    -- THÊM BODYVELOCITY GIỮ Ở TRÊN CAO
+    local bv = Instance.new("BodyVelocity")
+    bv.Name = "FlyVelocity"
+    bv.MaxForce = Vector3.new(0, math.huge, 0)
+    bv.Velocity = Vector3.new(0, 0, 0)
+    bv.Parent = hrp
+    
+    humanoid.PlatformStand = true
+    print("🚀 ĐÃ BAY LÊN TRỜI")
+end
+
+local function stopFly()
+    if not isFlying then return end
+    isFlying = false
+    
+    local player = game.Players.LocalPlayer
+    local character = player.Character
+    if not character then return end
+    
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character:FindFirstChild("Humanoid")
+    
+    if hrp then
+        local bv = hrp:FindFirstChild("FlyVelocity")
+        if bv then bv:Destroy() end
+    end
+    
+    if humanoid then
+        humanoid.PlatformStand = false
+    end
+    
+    print("🛬 ĐÃ HẠ CÁNH")
+end
+-- ===== HÀM CLICK BUTTON =====
+function ClickButton(path)
+    if path then
+        game:GetService("GuiService").SelectedObject = path
+        if game:GetService("GuiService").SelectedObject == path then
+            game:GetService("VirtualInputManager"):SendKeyEvent(true, 13, false, game)
+            task.wait()
+            game:GetService("VirtualInputManager"):SendKeyEvent(false, 13, false, game)
+        end
+        task.wait()
+        game:GetService("GuiService").SelectedObject = nil
+    end
+end
+
+-- ===== HÀM ĂN FRUIT =====
+local function EatFruit()
+    local character = player.Character
+    if not character then return end
+    
+    local tool = character:FindFirstChildOfClass("Tool")
+    if tool then
+        pcall(function()
+            local button = player.PlayerGui:FindFirstChild("EatFruitBecky") 
+                and player.PlayerGui.EatFruitBecky:FindFirstChild("Dialogue") 
+                and player.PlayerGui.EatFruitBecky.Dialogue:FindFirstChild("Collect")
+            
+            if button then
+                ClickButton(button)
+            end
+        end)
+    end
+end
+
+
+-- ===== HÀM CẤT FRUIT VÀO KHO =====
+local function StoreFruit()
+local isStoringFruit = false
+    spawn(function()
+        while getgenv().AutoStoreFruit do
+		isStoringFruit = true
+            task.wait(0.1)
+            
+            local fruitStore = player.PlayerStats:FindFirstChild("FruitStore")
+            local fruitStorageLimit = player.PlayerStats:FindFirstChild("FruitStorage")
+            local fruitStorage = ReplicatedStorage:FindFirstChild("Chest") and ReplicatedStorage.Chest:FindFirstChild("Fruits")
+            
+            if not fruitStore or not fruitStorageLimit then
+                warn("Không tìm thấy FruitStore hoặc FruitStorage!")
+                return
+            end
+            
+            local storedFruits = HttpService:JSONDecode(fruitStore.Value)
+            local storageLimit = fruitStorageLimit.Value
+            local backpack = player:FindFirstChild("Backpack")
+            local character = player.Character
+            
+            if not backpack or not character then return end
+            
+            for _, fruit in ipairs(fruitStorage:GetChildren()) do
+                if not getgenv().AutoStoreFruit then return end
+                
+                local fruitName = fruit.Name
+                local currentAmount = storedFruits[fruitName] or 0
+                
+                if currentAmount < storageLimit then
+                    local foundFruit = backpack:FindFirstChild(fruitName)
+                    
+                    if foundFruit then
+                        foundFruit.Parent = character
+                        task.wait(0.1)
+                        
+                        game:GetService("VirtualUser"):ClickButton1(Vector2.new(300, 300))
+                        task.wait(0.1)
+                        
+                        EatFruit()
+                        
+                        game:GetService("VirtualUser"):ClickButton1(Vector2.new(300, 300))
+                        task.wait(0.1)
+                        
+                        local startTime = tick()
+                        while (backpack:FindFirstChild(fruitName) or character:FindFirstChild(fruitName)) and (tick() - startTime < 5) do
+                            task.wait(0.5)
+							 isStoringFruit = false
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
+
 if sea(2) then
 local sTab = Window:MakeTab({
-    Name = "Sea Hop Beta ",
+    Name = "AUTO FIN/TAILS  ",
     Icon = "rbxassetid://4483345998",
     PremiumOnly = false
 })
@@ -340,24 +533,35 @@ end
 
 local function getBossRoot()
     local workspace = game:GetService("Workspace")
-    local bossFolders = {workspace.SeaMonster, workspace.GhostMonster}
-    local bosses = {"SeaKing", "HydraSeaKing", "Ghost Ship"}
-
-    for _, folder in ipairs(bossFolders) do
-        if folder then
-            for _, bossName in ipairs(bosses) do
-                local boss = folder:FindFirstChild(bossName)
-                if boss and boss:FindFirstChild("HumanoidRootPart") then
-                    return boss.HumanoidRootPart
-                end
-            end
-        end
+    
+    local seaKing = workspace.SeaMonster:FindFirstChild("SeaKing")
+    local hydra = workspace.SeaMonster:FindFirstChild("HydraSeaKing")
+    
+    if seaKing and seaKing:FindFirstChild("HumanoidRootPart") and seaKing.Humanoid.Health > 0 then
+        return seaKing.HumanoidRootPart
     end
+    if hydra and hydra:FindFirstChild("HumanoidRootPart") and hydra.Humanoid.Health > 0 then
+        return hydra.HumanoidRootPart
+    end
+    
     return nil
 end
 
+sTab:AddSlider({
+    Name = "Thời Gian Đợi Boss Sắp Spawn",
+    Min = 0,
+    Max = 300,
+    Default = Settings.HopThreshold,
+    Increment = 5,
+    ValueName = "giây",
+    Callback = function(value)
+        Settings.HopThreshold = value
+        SaveSettings()
+    end
+})
+
 sTab:AddToggle({
-    Name = "Auto Aim Skill HD+SK+GS",
+    Name = "Tự Động Đánh Boss",
     Default = Settings.autoskillsea,
     Callback = function(value)
         getgenv().AutoS = value
@@ -457,7 +661,7 @@ sTab:AddToggle({
 getgenv().AutoSeaKing = false
 
 sTab:AddToggle({
-    Name = "Auto Teleport SK+HD+GS",
+    Name = "Tự Động Dịch Chuyển Đến Boss ",
     Default = Settings.autoskhd,
     Callback = function(value)
         getgenv().AutoSeaKing = value
@@ -474,13 +678,11 @@ sTab:AddToggle({
                     local workspace = game:GetService("Workspace")
                     local seaKing = workspace.SeaMonster:FindFirstChild("SeaKing")
                     local hydra = workspace.SeaMonster:FindFirstChild("HydraSeaKing")
-                    local gs = workspace.GhostMonster:FindFirstChild("Ghost Ship")
 
                     local skHealth = seaKing and seaKing:FindFirstChild("Humanoid") and seaKing.Humanoid.Health or 0
                     local hydraHealth = hydra and hydra:FindFirstChild("Humanoid") and hydra.Humanoid.Health or 0
-                    local gsHealth = gs and gs:FindFirstChild("Humanoid") and gs.Humanoid.Health or 0
 
-                    if (not seaKing or skHealth <= 0) and (not hydra or hydraHealth <= 0) and (not gs or gsHealth <= 0) then
+                    if (not seaKing or skHealth <= 0) and (not hydra or hydraHealth <= 0) then
                         for _, name in ipairs({"Sea King Thunder", "Sea King Water", "Sea King Lava"}) do
                             local island = workspaceIsland:FindFirstChild(name)
                             if island and island:FindFirstChild("HydraStand") then
@@ -528,115 +730,415 @@ sTab:AddToggle({
     end
 })
 
+
 local TeleportService = game:GetService("TeleportService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local fileName = "teleported_servers.txt"
-local visitedServers = {}
-local serverList = {}
 
-if isfile(fileName) then
-    for id in string.gmatch(readfile(fileName), "[^\n]+") do
-        visitedServers[id] = true
-        table.insert(serverList, id)
+local serverQueue = {}
+local queueIndex = 1
+local isTeleporting = false
+
+local function getServerUptime(server)
+    return os.time() - server.CreatedAt
+end
+
+local function getTimeLabel(uptime)
+    local hours = math.floor(uptime / 3600)
+    local minutes = math.floor((uptime % 3600) / 60)
+    local seconds = uptime % 60
+    return string.format("%02d:%02d:%02d", hours, minutes, seconds)
+end
+
+local function getGroupNameByUptime(uptime)
+    if uptime >= 4 * 60 * 60 + 19 * 60 + 30 and uptime <= 4 * 60 * 60 + 26 * 60 then
+        return "Group1 - 4h19:30-4h26"
+    elseif uptime >= 8 * 60 * 60 + 50 * 60 + 30 and uptime <= 8 * 60 * 60 + 57 * 60 then
+        return "Group2 - 8h50:30-8h57"
+    elseif uptime >= 59 * 60 - 90 and uptime <= 1 * 60 * 60 + 4 * 60 then
+        return "Group3 - 0h57:30-1h04"
+    elseif uptime >= 2 * 60 * 60 + 5 * 60 + 30 and uptime <= 2 * 60 * 60 + 12 * 60 then
+        return "Group4 - 2h05:30-2h12"
+    elseif uptime >= 3 * 60 * 60 + 12 * 60 + 30 and uptime <= 3 * 60 * 60 + 19 * 60 then
+        return "Group5 - 3h12:30-3h19"
+    elseif uptime >= 5 * 60 * 60 + 29 * 60 + 30 and uptime <= 5 * 60 * 60 + 36 * 60 then
+        return "Group6 - 5h29:30-5h36"
+    elseif uptime >= 13 * 60 * 60 + 26 * 60 + 30 and uptime <= 13 * 60 * 60 + 33 * 60 then
+        return "Group7 - 13h26:30-13h33"
+    elseif uptime >= 18 * 60 * 60 + 8 * 60 + 30 and uptime <= 18 * 60 * 60 + 15 * 60 then
+        return "Group8 - 18h08:30-18h15"
+    elseif uptime >= 7 * 60 * 60 + 43 * 60 + 30 and uptime <= 7 * 60 * 60 + 50 * 60 then
+        return "Group9 - 7h43:30-7h50"
+    elseif uptime >= 6 * 60 * 60 + 36 * 60 + 30 and uptime <= 6 * 60 * 60 + 43 * 60 then
+        return "Group10 - 6h36:30-6h43"
+    elseif uptime >= 10 * 60 * 60 + 1 * 60 + 30 and uptime <= 10 * 60 * 60 + 8 * 60 then
+        return "Group11 - 10h01:30-10h08"
+    elseif uptime >= 11 * 60 * 60 + 9 * 60 + 30 and uptime <= 11 * 60 * 60 + 16 * 60 then
+        return "Group12 - 11h09:30-11h16"
     end
+    return nil
 end
 
-local function saveTeleportedServers(jobId)
-    pcall(function()
-        if not visitedServers[jobId] then
-            visitedServers[jobId] = true
-            table.insert(serverList, jobId)
-            writefile(fileName, table.concat(serverList, "\n"))
-        end
-    end)
-end
-
-local function removeOldestServer()
-    pcall(function()
-        if #serverList > 0 then
-            local removedId = table.remove(serverList, 1)
-            visitedServers[removedId] = nil
-            writefile(fileName, table.concat(serverList, "\n"))
-        end
-    end)
-end
-
--- ===== HÀM TÌM SERVER CÓ BOSS (THAY THẾ GetServers BẰNG GetServerLists) =====
-local function findValidServer()
+local function findValidServers()
+    removeExpiredServers()  -- XÓA SERVER CŨ TRƯỚC KHI TÌM
     local success, servers = pcall(function()
         return ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Assets"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("ClientNetwork"):WaitForChild("GetServerLists"):InvokeServer({ page = 1 })
     end)
     
     if not success or not servers then
-        return nil
+        return {}
     end
-    
+
     local validServers = { group1 = {}, group2 = {}, group3 = {}, group4 = {}, group5 = {} ,group6 = {}, group7 = {}, group8 = {},group9 = {}, group10 = {} , group11 = {}, group12 = {}}
-    local currentJobId = game.JobId
-    local currentPlaceId = game.PlaceId
-    
+    local currentJobId, currentPlaceId = game.JobId, game.PlaceId
+
     for _, server in ipairs(servers) do
-        if server.JobId and server.PlaceId == currentPlaceId and server.JobId ~= currentJobId and server.CreatedAt and server.PlayerCount then
-            local uptime = os.time() - server.CreatedAt
-            
-            if uptime >= 4 * 3600 + 21 * 60 and uptime <= 4 * 3600 + 30 * 60 then
-    table.insert(validServers.group1, server)
-            elseif uptime >= 8 * 3600 + 52 * 60 and uptime <= 9 * 3600 + 1 * 60 then
-    table.insert(validServers.group1, server)
-            elseif uptime >= 59 * 60 + 1 and uptime <= 1 * 3600 + 7 * 60 then
-    table.insert(validServers.group1, server)
-            elseif uptime >= 2 * 3600 + 7 * 60 and uptime <= 2 * 3600 + 14 * 60 then
-    table.insert(validServers.group1, server)
-            elseif uptime >= 3 * 3600 + 14 * 60 and uptime <= 3 * 3600 + 21 * 60 then
-    table.insert(validServers.group1, server)
-            elseif uptime >= 5 * 3600 + 31 * 60 and uptime <= 5 * 3600 + 37 * 60 then
-    table.insert(validServers.group1, server)
-            elseif uptime >= 13 * 3600 + 28 * 60 and uptime <= 13 * 3600 + 35 * 60 then
-    table.insert(validServers.group1, server)
-            elseif uptime >= 18 * 3600 + 10 * 60 and uptime <= 18 * 3600 + 17 * 60 then
-    table.insert(validServers.group1, server)
-            elseif uptime >= 7 * 3600 + 45 * 60 and uptime <= 7 * 3600 + 52 * 60 then
-    table.insert(validServers.group1, server)
-            elseif uptime >= 6 * 3600 + 38 * 60 and uptime <= 6 * 3600 + 45 * 60 then
-    table.insert(validServers.group1, server)
-            elseif uptime >= 10 * 3600 + 3 * 60 and uptime <= 10 * 3600 + 9 * 60 then
-    table.insert(validServers.group1, server)
-            elseif uptime >= 11 * 3600 + 11 * 60 and uptime <= 11 * 3600 + 17 * 60 then
-    table.insert(validServers.group1, server)
+        if server.JobId and server.CreatedAt and server.PlayerCount and server.PlaceId then
+            local uptime = getServerUptime(server)
+            local jobId = server.JobId
+            local players = server.PlayerCount
+
+                        if server.PlaceId == currentPlaceId and jobId ~= currentJobId and not collectedServers[jobId] and players > 0 and players < 13 then
+                -- GROUP1: 4h19:30 → 4h26
+                if uptime >= 4 * 60 * 60 + 19 * 60 + 30 and uptime <= 4 * 60 * 60 + 26 * 60 then
+                    table.insert(validServers.group1, server)
+                -- GROUP2: 8h50:30 → 8h57
+                elseif uptime >= 8 * 60 * 60 + 50 * 60 + 30 and uptime <= 8 * 60 * 60 + 57 * 60 then
+                    table.insert(validServers.group2, server)
+                -- GROUP3: 0h57:30 → 1h04
+                elseif uptime >= 59 * 60 - 90 and uptime <= 1 * 60 * 60 + 4 * 60 then
+                    table.insert(validServers.group3, server)
+                -- GROUP4: 2h05:30 → 2h12
+                elseif uptime >= 2 * 60 * 60 + 5 * 60 + 30 and uptime <= 2 * 60 * 60 + 12 * 60 then
+                    table.insert(validServers.group4, server)
+                -- GROUP5: 3h12:30 → 3h19
+                elseif uptime >= 3 * 60 * 60 + 12 * 60 + 30 and uptime <= 3 * 60 * 60 + 19 * 60 then
+                    table.insert(validServers.group5, server)
+                -- GROUP6: 5h29:30 → 5h36
+                elseif uptime >= 5 * 60 * 60 + 29 * 60 + 30 and uptime <= 5 * 60 * 60 + 36 * 60 then
+                    table.insert(validServers.group6, server)
+                -- GROUP7: 13h26:30 → 13h33
+                elseif uptime >= 13 * 60 * 60 + 26 * 60 + 30 and uptime <= 13 * 60 * 60 + 33 * 60 then
+                    table.insert(validServers.group7, server)
+                -- GROUP8: 18h08:30 → 18h15
+                elseif uptime >= 18 * 60 * 60 + 8 * 60 + 30 and uptime <= 18 * 60 * 60 + 15 * 60 then
+                    table.insert(validServers.group8, server)
+                -- GROUP9: 7h43:30 → 7h50
+                elseif uptime >= 7 * 60 * 60 + 43 * 60 + 30 and uptime <= 7 * 60 * 60 + 50 * 60 then
+                    table.insert(validServers.group9, server)
+                -- GROUP10: 6h36:30 → 6h43
+                elseif uptime >= 6 * 60 * 60 + 36 * 60 + 30 and uptime <= 6 * 60 * 60 + 43 * 60 then
+                    table.insert(validServers.group10, server)
+                -- GROUP11: 10h01:30 → 10h08
+                elseif uptime >= 10 * 60 * 60 + 1 * 60 + 30 and uptime <= 10 * 60 * 60 + 8 * 60 then
+                    table.insert(validServers.group11, server)
+                -- GROUP12: 11h09:30 → 11h16
+                elseif uptime >= 11 * 60 * 60 + 9 * 60 + 30 and uptime <= 11 * 60 * 60 + 16 * 60 then
+                    table.insert(validServers.group12, server)
+                end
             end
         end
     end
     
-    math.randomseed(tick())
-    local priorityGroups = { "group2", "group3", "group1", "group4" ,"group5","group6","group7","group8","group9","group10","group11","group12"}
+    local result = {}
+    local priorityGroups = { "group1", "group2", "group3", "group4", "group5", "group6", "group7", "group8", "group9", "group10", "group11", "group12"}
+    
+	----- TĂNG DANH SÁCH QUÉT SERVER
+
     for _, group in ipairs(priorityGroups) do
-        if #validServers[group] > 0 then
-            return validServers[group][math.random(#validServers[group])]
+        for _, server in ipairs(validServers[group]) do
+            if #result < 3 then
+                table.insert(result, server)
+            end
+        end
+        if #result >= 3 then break end
+    end
+    
+    if #result > 0 then
+        print("📋 TÌM ĐƯỢC 8 SERVER:")
+        for i, s in ipairs(result) do
+            local uptime = getServerUptime(s)
+            print(string.format("   %d. %s | %s | %d người", i, getTimeLabel(uptime), getGroupNameByUptime(uptime) or "?", s.PlayerCount))
         end
     end
     
-    return nil
+    return result
 end
 
--- 🏆 Hàm Teleport() mới (có trả về kết quả)
 local function Teleport()
-    local selectedServer = findValidServer()
-    if selectedServer then
-        print(string.format("🎯 TÌM THẤY! HOP VÀO: %s", selectedServer.JobId))
-        saveTeleportedServers(selectedServer.JobId)
-        th.New("Đang Tìm Server")
-        TeleportService:TeleportToPlaceInstance(selectedServer.PlaceId, selectedServer.JobId, game.Players.LocalPlayer)
-        return true
-    else
-        removeOldestServer()
-        th.New("Đang Tìm Server Nâng Cao",5)
-        return false
+ -- 👈 NẾU ĐANG CẤT FRUIT, KHÔNG TELEPORT
+    if isStoringFruit then
+        print("⏳ Đang cất fruit, chờ xong rồi hop...")
+        return
     end
+
+    if isTeleporting then return end
+    isTeleporting = true
+    
+    if #serverQueue == 0 then
+        serverQueue = findValidServers()
+        queueIndex = 1
+        if #serverQueue == 0 then
+            isTeleporting = false
+            return
+        end
+    end
+    
+    local server = serverQueue[queueIndex]
+    if not server then
+        serverQueue = {}
+        queueIndex = 1
+        isTeleporting = false
+        Teleport()
+        return
+    end
+    
+    local oldJobId = game.JobId
+    local uptime = getServerUptime(server)
+    local groupName = getGroupNameByUptime(uptime) or "?"
+print(string.format("🚀 HOP %d/8 | %s | %s | %d người", queueIndex, getTimeLabel(uptime), groupName, server.PlayerCount))    TeleportService:TeleportToPlaceInstance(server.PlaceId, server.JobId, game.Players.LocalPlayer)
+    task.wait(0.1)
+    
+    if game.JobId ~= oldJobId then
+        print("✅ TELEPORT THÀNH CÔNG!")
+        serverQueue = {}
+        isTeleporting = false
+
+		 -- 👈 THÊM DÒNG NÀY: CHỜ BOSS LOAD
+        task.wait(4)
+
+        return
+    end
+    
+    queueIndex = queueIndex + 1
+    if queueIndex > #serverQueue then
+        queueIndex = 1
+    end
+    
+    isTeleporting = false
+    Teleport()
 end
 
--- ===== AUTO HOP (GIỮ NGUYÊN CẤU TRÚC SPAM CŨ) =====
+-- ===== KIỂM TRA RƯƠNG =====
+local function hasAnyChest()
+    local workspaceIsland = game:GetService("Workspace").Island
+    local Workspace = game:GetService("Workspace")
+    
+    -- RƯƠNG HYDRA
+    for _, name in ipairs({"Sea King Thunder", "Sea King Water", "Sea King Lava"}) do
+        local island = workspaceIsland:FindFirstChild(name)
+        if island then
+            for _, chest in ipairs(island:GetChildren()) do
+                if chest:IsA("Model") and chest.Name:match("Chest$") then
+                    return true
+                end
+            end
+        end
+    end
+    
+    -- RƯƠNG SEA KING
+    for _, islandName in ipairs({"Legacy Island1", "Legacy Island2", "Legacy Island3", "Legacy Island4"}) do
+        local island = workspaceIsland:FindFirstChild(islandName)
+        if island and island:FindFirstChild("ChestSpawner") then
+            for _, chest in ipairs(island.ChestSpawner:GetChildren()) do
+                if chest:IsA("Model") and chest.Name:match("Chest$") then
+                    return true
+                end
+            end
+        end
+    end
+    
+    -- RƯƠNG GHOST SHIP (CHỈ NHẶT NẾU CÓ SẴN)
+    for i = 1, 5 do
+        if Workspace:FindFirstChild("Chest" .. i) and Workspace["Chest" .. i]:FindFirstChild("Top") then
+            return true
+        end
+    end
+    
+    return false
+end
+
+-- ===== HÀM CHỜ NHẶT RƯƠNG =====
+local function waitForLoot()
+    print("⏳ CHỜ NHẶT RƯƠNG...")
+    local startTime = tick()
+    local chestCollected = false
+    
+    -- LẤY GEM VÀ BELI HIỆN TẠI LÀM MỐC (CỐ ĐỊNH)
+    local gemBefore = game.Players.LocalPlayer.PlayerStats.Gem.Value
+    local beliBefore = game.Players.LocalPlayer.PlayerStats.beli.Value
+    print(string.format("📊 GEM TRƯỚC KHI NHẶT: %d | BELI: %d", gemBefore, beliBefore))
+    
+    -- CHỜ TỐI ĐA 15 GIÂY (TĂNG LÊN VÌ RƯƠNG CÓ THỂ XUẤT HIỆN CHẬM)
+    while (tick() - startTime) < 7 and not chestCollected and getgenv().SeaKinghop do
+        local currentGem = game.Players.LocalPlayer.PlayerStats.Gem.Value
+        local currentBeli = game.Players.LocalPlayer.PlayerStats.beli.Value
+        
+        -- KIỂM TRA GEM HOẶC BELI TĂNG (SO VỚI GIÁ TRỊ BAN ĐẦU)
+        if currentGem > gemBefore or currentBeli > beliBefore then
+            chestCollected = true
+            print(string.format("✅ NHẶT RƯƠNG THÀNH CÔNG! Gem: %d → %d (tăng %d)", 
+                  gemBefore, currentGem, currentGem - gemBefore))
+            if currentBeli > beliBefore then
+                print(string.format("💰 Beli: %d → %d (tăng %d)", 
+                      beliBefore, currentBeli, currentBeli - beliBefore))
+            end
+            -- CẬP NHẬT startGem VÀ startBeli
+            startGem = currentGem
+            startBeli = currentBeli
+            saveCollectedServer(game.JobId)  -- LƯU SERVER ĐÃ ĂN RƯƠNG
+                saveCollectedServer(game.JobId)
+    		    break
+        end
+        
+        -- KIỂM TRA RƯƠNG CÒN KHÔNG (NẾU HẾT THÌ THOÁT)
+        if not hasAnyChest() and (tick() - startTime) > 5 then
+            print("⚠️ RƯƠNG ĐÃ BIẾN MẤT!")
+            break
+        end
+        
+        -- IN LOG MỖI 3 GIÂY ĐỂ BIẾT ĐANG CHỜ
+        if math.floor(tick() - startTime) % 3 == 0 and (tick() - startTime) > 1 then
+            print(string.format("⏳ ĐANG CHỜ... Đã qua %.0f giây | Gem hiện tại: %d", 
+                  tick() - startTime, currentGem))
+        end
+        
+        task.wait(1)  -- KIỂM TRA MỖI 1 GIÂY (THAY VÌ 2 GIÂY)
+    end
+    
+    if not chestCollected then
+        print("⚠️ HẾT 7 GIÂY KHÔNG NHẶT ĐƯỢC RƯƠNG!")
+    end
+    
+ -- 👈 THÊM DÒNG NÀY: RESET GEM GỐC SAU KHI NHẶT XONG
+    startGem = nil
+    startBeli = nil
+
+    return chestCollected
+end
+
+-- ===== KIỂM TRA GEM TĂNG =====
+local function hasGemIncreased()
+    local currentGem = game.Players.LocalPlayer.PlayerStats.Gem.Value
+    local currentBeli = game.Players.LocalPlayer.PlayerStats.beli.Value
+    return (currentGem > startGem) or (currentBeli > startBeli)
+end
+
+-- ===== HÀM ĐÁNH BOSS =====
+local function fightBossByType(bossType)
+    print(string.format("⚔️ ĐANG ĐÁNH %s...", bossType))
+    
+    local bossDead = false
+    while not bossDead and getgenv().SeaKinghop do
+        task.wait(8)
+        
+        local checkSeaKing = Workspace.SeaMonster:FindFirstChild("SeaKing")
+        local checkHydra = Workspace.SeaMonster:FindFirstChild("HydraSeaKing")
+        
+        local skHealthNow = checkSeaKing and checkSeaKing:FindFirstChild("Humanoid") and checkSeaKing.Humanoid.Health or 0
+        local hydraHealthNow = checkHydra and checkHydra:FindFirstChild("Humanoid") and checkHydra.Humanoid.Health or 0
+        
+        if bossType == "SeaKing" and (not checkSeaKing or skHealthNow <= 0) then
+            bossDead = true
+            
+        elseif bossType == "Hydra" and (not checkHydra or hydraHealthNow <= 0) then
+            -- CHỜ 5 GIÂY ĐỂ HYDRA KỊP HỒI SINH
+            print("⏳ HYDRA CÓ DẤU HIỆU CHẾT, CHỜ 5 GIÂY KIỂM TRA LẠI...")
+            task.wait(5)
+            
+            local checkAgain = Workspace.SeaMonster:FindFirstChild("HydraSeaKing")
+            local healthAgain = checkAgain and checkAgain:FindFirstChild("Humanoid") and checkAgain.Humanoid.Health or 0
+            
+            if not checkAgain or healthAgain <= 0 then
+                bossDead = true
+                print("💀 HYDRA ĐÃ CHẾT THẬT!")
+            else
+                print("🔄 HYDRA HỒI SINH, TIẾP TỤC ĐÁNH...")
+            end
+            
+        elseif bossType == "SeaKing/Hydra" and 
+               (not checkSeaKing or skHealthNow <= 0) and (not checkHydra or hydraHealthNow <= 0) then
+            bossDead = true
+        end
+    end
+    
+    print(string.format("💀 %s ĐÃ CHẾT!", bossType))
+end
+
+-- ===== HÀM CHỜ BOSS SPAWN =====
+local function waitForBossSpawn(bossType, timeout)
+    timeout = timeout or 7
+    print(string.format("⏳ CHỜ %s SPAWN...", bossType))
+    local waitCount = 0
+    
+    while waitCount < timeout and getgenv().SeaKinghop do
+        task.wait(1)
+        waitCount = waitCount + 1
+        
+        local checkSeaKing = Workspace.SeaMonster:FindFirstChild("SeaKing")
+        local checkHydra = Workspace.SeaMonster:FindFirstChild("HydraSeaKing")
+        
+        if bossType == "SeaKing" and checkSeaKing and checkSeaKing:FindFirstChild("Humanoid") and checkSeaKing.Humanoid.Health > 0 then
+            print("🔥 SEAKING ĐÃ SPAWN!")
+            return true
+        elseif bossType == "Hydra" and checkHydra and checkHydra:FindFirstChild("Humanoid") and checkHydra.Humanoid.Health > 0 then
+            print("🔥 HYDRA ĐÃ SPAWN!")
+            return true
+        elseif (bossType == "SeaKing/Hydra") and 
+               ((checkSeaKing and checkSeaKing:FindFirstChild("Humanoid") and checkSeaKing.Humanoid.Health > 0) or
+                (checkHydra and checkHydra:FindFirstChild("Humanoid") and checkHydra.Humanoid.Health > 0)) then
+            print("🔥 SEAKING/HYDRA ĐÃ SPAWN!")
+            return true
+        end
+    end
+    
+    print(string.format("⚠️ HẾT THỜI GIAN CHỜ %s SPAWN", bossType))
+    return false
+end
+
+-- ===== HÀM XỬ LÝ TẤT CẢ BOSS ĐANG CÓ SẴN =====
+local function processAllActiveBosses()
+    local activeBosses = {}
+    local Workspace = game:GetService("Workspace")
+    
+    local seaKing = Workspace.SeaMonster:FindFirstChild("SeaKing")
+    local hydra = Workspace.SeaMonster:FindFirstChild("HydraSeaKing")
+    
+    local skHealth = seaKing and seaKing:FindFirstChild("Humanoid") and seaKing.Humanoid.Health or 0
+    local hydraHealth = hydra and hydra:FindFirstChild("Humanoid") and hydra.Humanoid.Health or 0
+    
+    if seaKing and skHealth > 0 then
+        table.insert(activeBosses, {type = "SeaKing", obj = seaKing, health = skHealth})
+        print("🎯 PHÁT HIỆN SEAKING ĐANG CÓ")
+    end
+    if hydra and hydraHealth > 0 then
+        table.insert(activeBosses, {type = "Hydra", obj = hydra, health = hydraHealth})
+        print("🎯 PHÁT HIỆN HYDRA ĐANG CÓ")
+    end
+    
+    if #activeBosses == 0 then
+        return 0
+    end
+    
+    print(string.format("📋 TỔNG CỘNG PHÁT HIỆN %d BOSS ĐANG CÓ", #activeBosses))
+    
+    for i, boss in ipairs(activeBosses) do
+        print(string.format("⚔️ ĐANG XỬ LÝ %s (%d/%d)", boss.type, i, #activeBosses))
+        fightBossByType(boss.type)
+        print("📦 ĐỢI RƯƠNG XUẤT HIỆN...")
+        task.wait(5)
+        waitForLoot()
+        
+        if i < #activeBosses then
+            print(string.format("🔄 TIẾP TỤC ĐÁNH %s", activeBosses[i+1].type))
+        end
+    end
+    
+    return #activeBosses
+end
+
+-- ===== AUTO HOP THÔNG MINH =====
 sTab:AddToggle({
-    Name = "Auto Hop Thông Minh | Beta (Sea King, Hydra)",
+    Name = "Tự Động Hop Sever Có Boss",
     Default = Settings.autoskhdhop,
     Callback = function(value)
         getgenv().SeaKinghop = value
@@ -644,38 +1146,84 @@ sTab:AddToggle({
         SaveSettings()
         
         if value then
+            local lastNotify = 0
             local startGem = nil
             local startBeli = nil
-            local bossWasAlive = false
             local waitingForChest = false
+            local chestWaitStart = 0
             
-            -- ===== HÀM SPAM HOP LIÊN TỤC =====
-            local function spamHop()
-                coroutine.wrap(function()
-                    while getgenv().SeaKinghop do
-                        local selectedServer = findValidServer()
-                        if selectedServer then
-                            print(string.format("🎯 HOP VÀO: %s", selectedServer.JobId))
-                            saveTeleportedServers(selectedServer.JobId)
-                            TeleportService:TeleportToPlaceInstance(selectedServer.PlaceId, selectedServer.JobId, game.Players.LocalPlayer)
-                            -- Reset cho server mới
-                            startGem = nil
-                            startBeli = nil
-                            bossWasAlive = false
-                            waitingForChest = false
-                        end
-                        task.wait(0.2)
-                    end
-                end)()
+            -- ===== CẬP NHẬT GEM GỐC =====
+            local function updateStartStats()
+                startGem = game.Players.LocalPlayer.PlayerStats.Gem.Value
+                startBeli = game.Players.LocalPlayer.PlayerStats.beli.Value
+                print("📊 Cập nhật gem gốc: " .. startGem)
             end
             
-            spawn(function()
+            -- ===== KIỂM TRA GEM TĂNG =====
+            local function hasGemIncreased()
+                local currentGem = game.Players.LocalPlayer.PlayerStats.Gem.Value
+                local currentBeli = game.Players.LocalPlayer.PlayerStats.beli.Value
+                return (currentGem > startGem) or (currentBeli > startBeli)
+            end
+            
+            -- ===== HÀM SPAM HOP =====
+            local function spamHop()
+    coroutine.wrap(function()
+        while getgenv().SeaKinghop do
+
+ -- 👈 NẾU ĐANG CẤT FRUIT, CHỜ
+            while isStoringFruit do
+                task.wait(0.5)
+            end
+
+            Teleport()
+            task.wait()
+        end
+    end)()
+end
+            
+            -- ===== HÀM COUNTDOWN NOTIFICATION =====
+            local function startCountdownNotification(bossType, spawnTime)
+                local remaining = spawnTime
+                local lastNotify = 0
+                
+                if remaining <= 0 then return end
+                
+                print(string.format("🔔 BẮT ĐẦU COUNTDOWN: %s sẽ spawn sau %d giây", bossType, remaining))
+                
+                while remaining > 0 and getgenv().SeaKinghop do
+                    local minutes = math.floor(remaining / 60)
+                    local seconds = remaining % 60
+                    
+                    local notifyInterval = (remaining <= 10) and 1 or 10
+                    local currentTime = tick()
+                    
+                    if currentTime - lastNotify >= notifyInterval then
+                        th.New(string.format("🌊 Sea King/Hydra sẽ spawn sau %d phút %d giây!", minutes, seconds), 2)
+                        lastNotify = currentTime
+                    end
+                    
+                    task.wait(1)
+                    remaining = remaining - 1
+                end
+            end
+            
+                        spawn(function()
                 while getgenv().SeaKinghop do
                     task.wait(0.6)
                     
+                                        -- ===== TỰ ĐỘNG HẠ CÁNH KHI CÓ BOSS =====
+                    if getgenv().AutoHide then
+                        local hasBoss = (seaKing and seaKing:FindFirstChild("Humanoid") and seaKing.Humanoid.Health > 0) or
+                                        (hydra and hydra:FindFirstChild("Humanoid") and hydra.Humanoid.Health > 0)
+                        if hasBoss then
+                            stopFly()
+                        end
+                    end
+                    -- =================================================
+                    
                     if startGem == nil then
-                        startGem = game.Players.LocalPlayer.PlayerStats.Gem.Value
-                        startBeli = game.Players.LocalPlayer.PlayerStats.beli.Value
+                        updateStartStats()
                     end
                     
                     local Workspace = game:GetService("Workspace")
@@ -687,12 +1235,11 @@ sTab:AddToggle({
                     
                     local seaKing = Workspace.SeaMonster:FindFirstChild("SeaKing")
                     local hydra = Workspace.SeaMonster:FindFirstChild("HydraSeaKing")
-                    local gs = Workspace.GhostMonster:FindFirstChild("Ghost Ship")
                     
                     local skTimeLabel = SecondSea:FindFirstChild("SKTimeLabel")
-                    local gsTimeLabel = SecondSea:FindFirstChild("GSTimeLabel")
                     
                     local function ConvertTimeToSeconds(timeStr)
+                        if not timeStr or timeStr == "" then return 9999 end
                         local h, m, s = timeStr:match("(%d+):(%d+):(%d+)")
                         if h and m and s then
                             return tonumber(h) * 3600 + tonumber(m) * 60 + tonumber(s)
@@ -701,115 +1248,191 @@ sTab:AddToggle({
                     end
                     
                     local skSpawnTime = skTimeLabel and ConvertTimeToSeconds(skTimeLabel.Text) or 9999
-                    local gsSpawnTime = gsTimeLabel and ConvertTimeToSeconds(gsTimeLabel.Text) or 9999
                     
-                    -- ===== KIỂM TRA RƯƠNG =====
-                    local function hasAnyChest()
-                        for i = 1, 5 do
-                            if Workspace:FindFirstChild("Chest" .. i) and Workspace["Chest" .. i]:FindFirstChild("Top") then
-                                return true
-                            end
-                        end
-                        for _, islandName in ipairs({"Legacy Island1", "Legacy Island2", "Legacy Island3", "Legacy Island4"}) do
-                            local island = workspaceIsland:FindFirstChild(islandName)
-                            if island and island:FindFirstChild("ChestSpawner") then
-                                for _, chest in ipairs(island.ChestSpawner:GetChildren()) do
-                                    if chest:IsA("Model") and chest.Name:match("Chest$") then
-                                        return true
-                                    end
-                                end
-                            end
-                        end
-                        for _, name in ipairs({"Sea King Thunder", "Sea King Water", "Sea King Lava"}) do
-                            local island = workspaceIsland:FindFirstChild(name)
-                            if island then
-                                for _, chest in ipairs(island:GetChildren()) do
-                                    if chest:IsA("Model") and chest.Name:match("Chest$") then
-                                        return true
-                                    end
-                                end
-                            end
-                        end
-                        return false
-                    end
-                    
-                    -- ===== KIỂM TRA BOSS =====
                     local skHealth = seaKing and seaKing:FindFirstChild("Humanoid") and seaKing.Humanoid.Health or 0
                     local hydraHealth = hydra and hydra:FindFirstChild("Humanoid") and hydra.Humanoid.Health or 0
-                    local gsHealth = gs and gs:FindFirstChild("Humanoid") and gs.Humanoid.Health or 0
                     
-                    local hasBoss = (seaKing and skHealth > 0) or (hydra and hydraHealth > 0) or (gs and gsHealth > 0)
+                    local hasSeaKing = seaKing and skHealth > 0
+                    local hasHydra = hydra and hydraHealth > 0
+                    local hasBoss = hasSeaKing or hasHydra
                     local hasChest = hasAnyChest()
+                    local skSoon = skSpawnTime < Settings.HopThreshold
                     
-                    -- ===== NẾU ĐANG CHỜ NHẶT RƯƠNG =====
-                    if waitingForChest then
-                        local currentGem = PlayerStats.Gem.Value
-                        local currentBeli = PlayerStats.beli.Value
-                        
-                        if currentGem > startGem or currentBeli > startBeli then
-                            print(string.format("✅ NHẶT RƯƠNG! Gem: %d → %d", startGem, currentGem))
-                            waitingForChest = false
-                            spamHop()  -- BẮT ĐẦU SPAM HOP
-                        else
-                            task.wait(2)
-                        end
-                        continue
-                    end
-                    
-                    -- ===== NẾU ĐANG CÓ BOSS =====
+                    -- =====================================================
+                    -- ===== BƯỚC 1: CÓ BOSS =====
+                    -- =====================================================
                     if hasBoss then
-                        bossWasAlive = true
-                        task.wait(5)
+                        print("⚔️ PHÁT HIỆN BOSS - TIẾN HÀNH XỬ LÝ")
+                        processAllActiveBosses()
+                        print("🎯 ĐÃ XỬ LÝ XONG BOSS, HOP TÌM SERVER MỚI!")
+                        if getgenv().AutoHide then startFly() end
+					    spamHop()
                         continue
                     end
                     
-                    -- ===== NẾU CÓ RƯƠNG SẴN (KHÔNG BOSS) =====
-                    if hasChest and not hasBoss and not waitingForChest then
+                    -- BƯỚC 2: BOSS SẮP SPAWN
+if skSoon then
+    print("⏳ SEAKING/HYDRA SẮP SPAWN - CHỜ ĐÁNH")
+    
+  if getgenv().AutoHide then startFly() end
+
+    local countdownStart = tick()
+    local remaining = skSpawnTime
+    
+    while remaining > 0 and getgenv().SeaKinghop do
+        if remaining <= 10 then
+            print(string.format("🔔 SEAKING/HYDRA SPAWN SAU %d GIÂY!", remaining))
+        elseif remaining % 10 == 0 then
+            local minutes = math.floor(remaining / 60)
+            local seconds = remaining % 60
+            if minutes > 0 then
+                print(string.format("🔔 SEAKING/HYDRA SẼ SPAWN SAU %d PHÚT %d GIÂY", minutes, seconds))
+            else
+                print(string.format("🔔 SEAKING/HYDRA SẼ SPAWN SAU %d GIÂY", seconds))
+            end
+        end
+        
+        task.wait(1)
+        remaining = skSpawnTime - math.floor(tick() - countdownStart)
+    end
+    
+    print("⏳ ĐANG CHỜ BOSS XUẤT HIỆN...")
+    local bossSpawned = false
+    local spawnWaitStart = tick()
+    local hasSeaKingSpawned = false
+    local hasHydraSpawned = false
+    
+    while not bossSpawned and (tick() - spawnWaitStart) < 15 and getgenv().SeaKinghop do
+        local checkSeaKing = Workspace.SeaMonster:FindFirstChild("SeaKing")
+        local checkHydra = Workspace.SeaMonster:FindFirstChild("HydraSeaKing")
+        
+        if checkSeaKing and checkSeaKing:FindFirstChild("Humanoid") and checkSeaKing.Humanoid.Health > 0 then
+            hasSeaKingSpawned = true
+            print("🔥 SEAKING ĐÃ SPAWN!")
+        end
+        if checkHydra and checkHydra:FindFirstChild("Humanoid") and checkHydra.Humanoid.Health > 0 then
+            hasHydraSpawned = true
+            print("🔥 HYDRA ĐÃ SPAWN!")
+        end
+        
+        if hasSeaKingSpawned or hasHydraSpawned then
+            bossSpawned = true
+            break
+        end
+        
+        if math.floor(tick() - spawnWaitStart) % 3 == 0 and (tick() - spawnWaitStart) > 1 then
+            print(string.format("⏳ VẪN ĐANG CHỜ BOSS SPAWN... Đã qua %.0f giây", tick() - spawnWaitStart))
+        end
+        
+        task.wait(1)
+    end
+    
+    if not bossSpawned then
+        print("⚠️ KHÔNG THẤY BOSS SPAWN SAU 15 GIÂY! HOP TÌM SERVER MỚI!")
+        spamHop()
+        continue
+    end
+    
+    if hasSeaKingSpawned then
+        fightBossByType("SeaKing")
+    end
+    if hasHydraSpawned then
+        fightBossByType("Hydra")
+    end
+    
+    print("📦 ĐỢI RƯƠNG...")
+    task.wait(5)
+    waitForLoot()
+    print("🎯 HOP TÌM SERVER MỚI!")
+    spamHop()
+    continue
+end
+                    
+                    -- =====================================================
+                    -- ===== BƯỚC 3: CÓ RƯƠNG SẴN =====
+                    -- =====================================================
+                    if hasChest and not waitingForChest then
+                        local currentSkSpawnTime = skTimeLabel and ConvertTimeToSeconds(skTimeLabel.Text) or 9999
+                        local currentSkSoon = currentSkSpawnTime < Settings.HopThreshold
+                        
+                        if currentSkSoon then
+                            print("⚠️ CÓ RƯƠNG NHƯNG SEAKING SẮP SPAWN - NHẶT RỒI CHỜ BOSS!")
+                        else
+                            print("📦 CÓ RƯƠNG SẴN - TIẾN HÀNH NHẶT RỒI HOP")
+                        end
                         waitingForChest = true
+                        chestWaitStart = tick()
                         continue
                     end
                     
-                    -- ===== NẾU BOSS SẮP SPAWN =====
-                    if skSpawnTime < Settings.HopThreshold then
-                        task.wait(5)
-                        continue
-                    end
+                    -- =====================================================
+                    -- ===== BƯỚC 4: CHỜ NHẶT RƯƠNG =====
+                    -- =====================================================
+                    if waitingForChest then
+    if hasGemIncreased() then
+        local currentGem = PlayerStats.Gem.Value
+        print(string.format("✅ NHẶT RƯƠNG THÀNH CÔNG! Gem: %d → %d", startGem, currentGem))
+        updateStartStats()
+        
+		-- 👈 THÊM DÒNG NÀY ĐỂ LƯU SERVER
+        saveCollectedServer(game.JobId)
+
+   -- 👈 THÊM DÒNG NÀY: BAY LÊN SAU KHI NHẶT THÀNH CÔNG
+        if getgenv().AutoHide then startFly() end
+
+        -- ===== THÊM ĐOẠN NÀY =====
+        -- KIỂM TRA CÒN RƯƠNG KHÁC KHÔNG
+        if hasAnyChest() then
+            print("📦 VẪN CÒN RƯƠNG KHÁC, TIẾP TỤC NHẶT...")
+            chestWaitStart = tick()  -- RESET THỜI GIAN
+           			-- KHÔNG HOP, TIẾP TỤC NHẶT
+		  if getgenv().AutoHide then startFly() end
+        else
+            print("🎯 NHẶT XONG TẤT CẢ RƯƠNG - HOP TÌM SERVER MỚI!")
+            waitingForChest = false
+			if getgenv().AutoHide then startFly() end
+            spamHop()
+            continue
+        end
+        -- =======================
+        continue
+    end
+    
+    local elapsed = tick() - chestWaitStart
+    if elapsed >= 2 then
+        print("⚠️ HẾT 2 GIÂY KHÔNG NHẶT ĐƯỢC RƯƠNG - HOP LUÔN!")
+        waitingForChest = false
+        spamHop()
+        continue
+    end
+    
+    if not hasAnyChest() then
+        print("⚠️ RƯƠNG BIẾN MẤT - HOP TÌM SERVER MỚI!")
+        waitingForChest = false
+        spamHop()
+        continue
+    end
+    
+    task.wait(2)
+    continue
+end
                     
-                    if gsSpawnTime < Settings.HopThreshold then
-                        task.wait(5)
-                        continue
-                    end
-                    
-                    -- ===== BOSS VỪA CHẾT =====
-                    if bossWasAlive and not hasBoss then
-                        task.wait(5)
-                        waitingForChest = true
-                        bossWasAlive = false
-                        continue
-                    end
-                    
-                    -- ===== KHÔNG CÓ BOSS, KHÔNG RƯƠNG → SPAM HOP =====
+                    -- =====================================================
+                    -- ===== BƯỚC 5: KHÔNG CÓ GÌ =====
+                    -- =====================================================
+                    print("🔄 KHÔNG CÓ GÌ - TÌM SERVER MỚI")
+					if getgenv().AutoHide then startFly() end
                     spamHop()
                 end
             end)
         end
     end
 })
-sTab:AddSlider({
-    Name = "Thời gian Chờ GS+HD+SK (giây)",
-    Min = 0,
-    Max = 300,
-    Default = Settings.HopThreshold,
-    Increment = 5,
-    ValueName = "giây",
-    Callback = function(value)
-        Settings.HopThreshold = value
-        SaveSettings()
-    end
-})
 
+
+-- ===== TOGGLE CẤT FRUIT =====
 sTab:AddToggle({
-    Name = "Auto Cất Fruit",
+    Name = "TỰ ĐỘNG CẤT FRUIT",
     Default = Settings.autocat,
     Callback = function(Value)
         Settings.autocat = Value
@@ -820,6 +1443,22 @@ sTab:AddToggle({
         end
     end
 })
+
+sTab:AddToggle({
+    Name = "Tự Động Núp Trên Trời",
+    Default = Settings.autoHide,
+    Callback = function(value)
+        Settings.autoHide = value
+        SaveSettings()
+        getgenv().AutoHide = value
+        
+        if not value then
+            stopFly()
+        end
+    end
+})
+
+
 
 sTab:AddToggle({
     Name = "Xóa Effect",
@@ -868,10 +1507,10 @@ sTab:AddToggle({
 })
 end
 
--- ===== PHẦN LẶT VẶT =====
+-- ===== PHẦN LẶT VẶT (GIỮ NGUYÊN) =====
 if not sea(4) then
 local latTab = Window:MakeTab({
-    Name = "Lặt Vặt",
+    Name = "AUTO FIX LAG",
     Icon = "rbxassetid://4483345998",
     PremiumOnly = false
 })
@@ -974,7 +1613,7 @@ local quantityToBuy = 1
 local autoBuy = false
 
 local keyTab = Window:MakeTab({
-    Name = "Key Buying",
+    Name = "AUTO FRUIT",
     Icon = "rbxassetid://4483345998",
     PremiumOnly = false
 })
@@ -1133,7 +1772,7 @@ end
 
 -- ===== SERVER INFO TAB =====
 local TeleportTab = Window:MakeTab({
-    Name = "Server Info",
+    Name = "INFOR SERVER",
     Icon = "rbxassetid://4483345998",
     PremiumOnly = false
 })
@@ -1304,7 +1943,7 @@ TeleportTab:AddButton({
 
 -- ===== MISC TAB =====
 local MiscTab = Window:MakeTab({
-    Name = "❕Misc",
+    Name = "SETTING MENU 1",
     Icon = "rbxassetid://4483345998",
     PremiumOnly = false
 })
@@ -1449,7 +2088,7 @@ MiscTab:AddButton({
 
 -- ===== HUB TAB =====
 local hubTab = Window:MakeTab({
-    Name = "Hub",
+    Name = "SETTING MENU 2",
     Icon = "rbxassetid://4483345998",
     PremiumOnly = false
 })
@@ -1601,8 +2240,8 @@ local function sendWebhook(webhookURL, includeItemsAndFruits)
             ["color"] = tonumber(0xff0000),
             ["fields"] = fields,
             ["footer"] = {
-                ["text"] = "CHANBAOV3 | Thông báo tự động",
-                ["icon_url"] = "https://i.imgur.com/gtePhRZ.jpeg"
+                ["text"] = "Super Fin/Tail | Thông báo tự động",
+                ["icon_url"] = "https://i.imgur.com/5TiFtQV.jpeg"
             },
             ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%S.000Z", os.time())
         }}
@@ -1711,8 +2350,8 @@ local payload = HttpService:JSONEncode({
         ["color"] = tonumber(0xFFC0CB),
         ["fields"] = fields,
         ["footer"] = {
-            ["text"] = "CHANBAOV3 | Thông báo tự động",
-            ["icon_url"] = "https://i.imgur.com/gtePhRZ.jpeg"
+            ["text"] = "Super Fin/Tail | Thông báo tự động",
+            ["icon_url"] = "https://i.imgur.com/5TiFtQV.jpeg"
         },
         ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%S.000Z", os.time())
     }}
