@@ -1332,7 +1332,7 @@ sTab:AddToggle({
 
     -- 👈 THÊM 4 DÒNG NÀY VÀO ĐÂY
             while _G.isStoringFruit do
-                task.wait(0.7)
+                task.wait(1.5)
             end
 
             Teleport()
