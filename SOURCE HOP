@@ -75,6 +75,9 @@ local player = players.LocalPlayer
 local TweenService = game:GetService("TweenService")
 local th = {}
 local notifications = {}
+local hasTeleportedToChest = false
+_G.isStoringFruit = false
+local isFruitTable = {}
 
 function th.New(message, duration)
     duration = duration or 3
@@ -347,6 +350,39 @@ local jobId = currentJobId
 
 local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/imaxspeedl12-collab/orionlib/refs/heads/main/orionlib", true))()
 
+
+--Hàm Nhận Event Daily
+game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("GetRewards"):InvokeServer()
+
+
+--Hàm Dùng Tomoe Taiko
+local args = {
+	"Tomoe Taiko"
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("AccessoryEq"):InvokeServer(unpack(args))
+
+
+--Hàm Dùng ATK
+local args = {
+	"EquipWeapon",
+	{
+		WeaponName = "Authentic Triple Katana",
+		Type = "Primary"
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("EtcFunction"):InvokeServer(unpack(args))
+
+
+--Hàm Nâng Stat Fruit--
+task.spawn(function()
+    wait(1)
+    local player = game.Players.LocalPlayer
+    local remote = player.PlayerGui and player.PlayerGui.MainGui and player.PlayerGui.MainGui.StarterFrame and player.PlayerGui.MainGui.StarterFrame.StatsFrame and player.PlayerGui.MainGui.StarterFrame.StatsFrame.RemoteEvent
+    if remote then
+        remote:FireServer("Fruit", 9999)
+    end
+end)
+
 local pe = game:GetService("Players").LocalPlayer.Name
 local Window = OrionLib:MakeWindow({
     Name = "🌊 CHANBAO | UPDATE 10", 
@@ -452,33 +488,56 @@ local function EatFruit()
     local tool = character:FindFirstChildOfClass("Tool")
     if tool then
         pcall(function()
+            -- 👈 CLICK LẦN 1
+            game:GetService("VirtualUser"):ClickButton1(Vector2.new(300, 300))
+            task.wait(1)
+            
+            -- 👈 TÌM NÚT COLLECT VÀ CLICK
             local button = player.PlayerGui:FindFirstChild("EatFruitBecky") 
                 and player.PlayerGui.EatFruitBecky:FindFirstChild("Dialogue") 
                 and player.PlayerGui.EatFruitBecky.Dialogue:FindFirstChild("Collect")
             
             if button then
                 ClickButton(button)
+                task.wait(1)
             end
+            
+            -- 👈 CLICK LẦN 2 ĐỂ XÁC NHẬN
+            game:GetService("VirtualUser"):ClickButton1(Vector2.new(300, 300))
+            task.wait(1)
         end)
     end
 end
 
 
--- ===== HÀM CẤT FRUIT VÀO KHO =====
+-- ===== HÀM CẤT FRUIT VÀO KHO (ĐÃ TỐI ƯU) =====
 local function StoreFruit()
-local isStoringFruit = false
     spawn(function()
+        -- 👈 TẠO TABLE LOOKUP 1 LẦN DUY NHẤT
+        local fruitStorage = ReplicatedStorage:FindFirstChild("Chest") and ReplicatedStorage.Chest:FindFirstChild("Fruits")
+        if fruitStorage then
+            for _, fruit in ipairs(fruitStorage:GetChildren()) do
+                isFruitTable[fruit.Name] = true
+            end
+            local count = 0
+            for _ in pairs(isFruitTable) do count = count + 1 end
+            print("📋 Đã load " .. count .. " loại fruit")
+        else
+            warn("⚠️ Không tìm thấy Fruit Storage!")
+        end
+        
         while getgenv().AutoStoreFruit do
-		isStoringFruit = true
-            task.wait(0.1)
+            _G.isStoringFruit = true
+            task.wait(0.05)
             
             local fruitStore = player.PlayerStats:FindFirstChild("FruitStore")
             local fruitStorageLimit = player.PlayerStats:FindFirstChild("FruitStorage")
-            local fruitStorage = ReplicatedStorage:FindFirstChild("Chest") and ReplicatedStorage.Chest:FindFirstChild("Fruits")
             
             if not fruitStore or not fruitStorageLimit then
                 warn("Không tìm thấy FruitStore hoặc FruitStorage!")
-                return
+                _G.isStoringFruit = false
+                task.wait(1)
+                continue
             end
             
             local storedFruits = HttpService:JSONDecode(fruitStore.Value)
@@ -486,37 +545,139 @@ local isStoringFruit = false
             local backpack = player:FindFirstChild("Backpack")
             local character = player.Character
             
-            if not backpack or not character then return end
+            if not backpack or not character then 
+                _G.isStoringFruit = false
+                task.wait(0.5)
+                continue
+            end
             
-            for _, fruit in ipairs(fruitStorage:GetChildren()) do
+            -- 👈 DUYỆT BACKPACK, KIỂM TRA BẰNG LOOKUP CỰC NHANH
+            for _, foundFruit in ipairs(backpack:GetChildren()) do
                 if not getgenv().AutoStoreFruit then return end
                 
-                local fruitName = fruit.Name
+                local fruitName = foundFruit.Name
+                
+
+              for _, foundFruit in ipairs(backpack:GetChildren()) do
+    if not getgenv().AutoStoreFruit then return end
+    
+    local fruitName = foundFruit.Name
+    
+    -- 👈 ĐẶT Ở ĐÂY LÀ ƯU TIÊN NHẤT (TRƯỚC MỌI KIỂM TRA)
+    if fruitName == "MagmaFruit" then
+        print("🌋 PHÁT HIỆN MAGMAFRUIT! ƯU TIÊN ĂN NGAY!")
+        
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid:EquipTool(foundFruit)
+            task.wait(0.5)
+            
+            game:GetService("VirtualUser"):ClickButton1(Vector2.new(300, 300))
+            task.wait(0.5)
+            
+            local acceptBtn = player.PlayerGui:FindFirstChild("EatFruitBecky") 
+                and player.PlayerGui.EatFruitBecky:FindFirstChild("Dialogue") 
+                and player.PlayerGui.EatFruitBecky.Dialogue:FindFirstChild("Accept")
+            
+            if acceptBtn then
+                ClickButton(acceptBtn)
+                task.wait(0.3)
+                ClickButton(acceptBtn)
+                task.wait(0.3)
+                print("✅ ĐÃ ĂN MAGMAFRUIT!")
+            end
+        end
+        
+        _G.isStoringFruit = false
+        return
+    end
+    
+    -- SAU ĐÓ MỚI KIỂM TRA CÁC FRUIT KHÁC
+    if not isFruitTable[fruitName] then
+        continue
+    end
+    
+    local currentAmount = storedFruits[fruitName] or 0
+    if currentAmount < storageLimit then
+        -- ... CODE CẤT FRUIT ...
+    end
+end 
+
+                -- KIỂM TRA CÓ PHẢI FRUIT KHÔNG (CHỈ MẤT 0.0001s)
+                if not isFruitTable[fruitName] then
+                    continue
+                end
+                
                 local currentAmount = storedFruits[fruitName] or 0
                 
                 if currentAmount < storageLimit then
-                    local foundFruit = backpack:FindFirstChild(fruitName)
-                    
-                    if foundFruit then
-                        foundFruit.Parent = character
+                   -- 👈 CÁCH 1: DÙNG EQUIP TOOL
+local humanoid = character:FindFirstChild("Humanoid")
+if humanoid then
+    humanoid:EquipTool(foundFruit)
+    task.wait(1)
+else
+    foundFruit.Parent = character
+    task.wait(1)
+end
+
+-- KIỂM TRA XEM ĐÃ EQUIP THÀNH CÔNG CHƯA
+if not character:FindFirstChild(foundFruit.Name) then
+    print("⚠️ Chưa equip được, thử lại...")
+    humanoid:EquipTool(foundFruit)
+    task.wait(1)
+end
+
+if character:FindFirstChild(foundFruit.Name) then
+    print("✅ Đã equip " .. fruitName .. " lên tay")
+    
+    -- CLICK MỞ UI
+    game:GetService("VirtualUser"):ClickButton1(Vector2.new(300, 300))
+    task.wait(1)
+    
+   -- TÌM NÚT COLLECT
+local button = player.PlayerGui:FindFirstChild("EatFruitBecky") 
+    and player.PlayerGui.EatFruitBecky:FindFirstChild("Dialogue") 
+    and player.PlayerGui.EatFruitBecky.Dialogue:FindFirstChild("Collect")
+
+if button then
+    -- 👈 CLICK LẦN 1
+    ClickButton(button)
+    task.wait(0.5)
+    
+	-- 👈 CLICK LẦN 2 CHO CHẮC
+    ClickButton(button)
+    task.wait(0.5)
+       
+    -- 👈 CLICK LẦN 2 CHO CHẮC
+    ClickButton(button)
+    task.wait(0.5)
+else
+    print("⚠️ Không tìm thấy nút Collect, thử click bằng tọa độ...")
+    -- CLICK BẰNG TỌA ĐỘ 3 LẦN
+    for i = 1, 3 do
+        game:GetService("VirtualUser"):ClickButton1(Vector2.new(500, 400))
+        task.wait(0.2)
+    end
+end
+
+-- CLICK XÁC NHẬN (VẪN GIỮ)
+game:GetService("VirtualUser"):ClickButton1(Vector2.new(300, 300))
+task.wait(0.2)
+else
+-- 👈 THÊM 3 DÒNG NÀY VÀO ĐÂY
+    storedCount = storedCount + 1
+    print("✅ Đã cất " .. storedCount .. " fruit, dừng lại!")
+    return  -- THOÁT HẲN HÀM StoreFruit()
+end
+                    local startTime = tick()
+                    while (backpack:FindFirstChild(fruitName) or character:FindFirstChild(fruitName)) and (tick() - startTime < 2) do
                         task.wait(0.1)
-                        
-                        game:GetService("VirtualUser"):ClickButton1(Vector2.new(300, 300))
-                        task.wait(0.1)
-                        
-                        EatFruit()
-                        
-                        game:GetService("VirtualUser"):ClickButton1(Vector2.new(300, 300))
-                        task.wait(0.1)
-                        
-                        local startTime = tick()
-                        while (backpack:FindFirstChild(fruitName) or character:FindFirstChild(fruitName)) and (tick() - startTime < 5) do
-                            task.wait(0.5)
-							 isStoringFruit = false
-                        end
                     end
                 end
             end
+            _G.isStoringFruit = false
+            task.wait(0.05)
         end
     end)
 end
@@ -846,15 +1007,15 @@ local function findValidServers()
 
     for _, group in ipairs(priorityGroups) do
         for _, server in ipairs(validServers[group]) do
-            if #result < 3 then
+            if #result < 7 then
                 table.insert(result, server)
             end
         end
-        if #result >= 3 then break end
+        if #result >= 7 then break end
     end
     
     if #result > 0 then
-        print("📋 TÌM ĐƯỢC 8 SERVER:")
+        print("📋 TÌM ĐƯỢC 7 SERVER:")
         for i, s in ipairs(result) do
             local uptime = getServerUptime(s)
             print(string.format("   %d. %s | %s | %d người", i, getTimeLabel(uptime), getGroupNameByUptime(uptime) or "?", s.PlayerCount))
@@ -865,11 +1026,7 @@ local function findValidServers()
 end
 
 local function Teleport()
- -- 👈 NẾU ĐANG CẤT FRUIT, KHÔNG TELEPORT
-    if isStoringFruit then
-        print("⏳ Đang cất fruit, chờ xong rồi hop...")
-        return
-    end
+
 
     if isTeleporting then return end
     isTeleporting = true
@@ -895,15 +1052,16 @@ local function Teleport()
     local oldJobId = game.JobId
     local uptime = getServerUptime(server)
     local groupName = getGroupNameByUptime(uptime) or "?"
-print(string.format("🚀 HOP %d/8 | %s | %s | %d người", queueIndex, getTimeLabel(uptime), groupName, server.PlayerCount))    TeleportService:TeleportToPlaceInstance(server.PlaceId, server.JobId, game.Players.LocalPlayer)
+print(string.format("🚀 HOP %d/7 | %s | %s | %d người", queueIndex, getTimeLabel(uptime), groupName, server.PlayerCount))    TeleportService:TeleportToPlaceInstance(server.PlaceId, server.JobId, game.Players.LocalPlayer)
     task.wait(0.1)
     
     if game.JobId ~= oldJobId then
         print("✅ TELEPORT THÀNH CÔNG!")
         serverQueue = {}
         isTeleporting = false
-
+       hasTeleportedToChest = false
 		 -- 👈 THÊM DÒNG NÀY: CHỜ BOSS LOAD
+		 storedCount = 0
         task.wait(4)
 
         return
@@ -1151,6 +1309,7 @@ sTab:AddToggle({
             local startBeli = nil
             local waitingForChest = false
             local chestWaitStart = 0
+			local storedCount = 0
             
             -- ===== CẬP NHẬT GEM GỐC =====
             local function updateStartStats()
@@ -1171,9 +1330,9 @@ sTab:AddToggle({
     coroutine.wrap(function()
         while getgenv().SeaKinghop do
 
- -- 👈 NẾU ĐANG CẤT FRUIT, CHỜ
-            while isStoringFruit do
-                task.wait(0.5)
+    -- 👈 THÊM 4 DÒNG NÀY VÀO ĐÂY
+            while _G.isStoringFruit do
+                task.wait(0.7)
             end
 
             Teleport()
@@ -1347,19 +1506,26 @@ if skSoon then
     spamHop()
     continue
 end
-                    
-                    -- =====================================================
+                                        -- =====================================================
                     -- ===== BƯỚC 3: CÓ RƯƠNG SẴN =====
                     -- =====================================================
                     if hasChest and not waitingForChest then
-                        local currentSkSpawnTime = skTimeLabel and ConvertTimeToSeconds(skTimeLabel.Text) or 9999
-                        local currentSkSoon = currentSkSpawnTime < Settings.HopThreshold
-                        
-                        if currentSkSoon then
-                            print("⚠️ CÓ RƯƠNG NHƯNG SEAKING SẮP SPAWN - NHẶT RỒI CHỜ BOSS!")
-                        else
-                            print("📦 CÓ RƯƠNG SẴN - TIẾN HÀNH NHẶT RỒI HOP")
+                        -- 👈 CHỈ TELE XUỐNG 1 LẦN DUY NHẤT
+                        if not hasTeleportedToChest then
+                            local _, chestModel = hasAnyChest()
+                            if chestModel then
+                                local hrp = game.Players.LocalPlayer.Character.HumanoidRootPart
+                                local chestPos = chestModel:FindFirstChild("Top") and chestModel.Top.Position or 
+                                                  chestModel.PrimaryPart and chestModel.PrimaryPart.Position or
+                                                  chestModel:GetPivot().Position
+                                if chestPos then
+                                    hrp.CFrame = CFrame.new(chestPos.X, chestPos.Y + 5, chestPos.Z)
+                                    hasTeleportedToChest = true
+                                    print("📌 TELE XUỐNG NHẶT RƯƠNG")
+                                end
+                            end
                         end
+                        
                         waitingForChest = true
                         chestWaitStart = tick()
                         continue
@@ -1377,31 +1543,29 @@ end
 		-- 👈 THÊM DÒNG NÀY ĐỂ LƯU SERVER
         saveCollectedServer(game.JobId)
 
-   -- 👈 THÊM DÒNG NÀY: BAY LÊN SAU KHI NHẶT THÀNH CÔNG
-        if getgenv().AutoHide then startFly() end
-
+  
         -- ===== THÊM ĐOẠN NÀY =====
         -- KIỂM TRA CÒN RƯƠNG KHÁC KHÔNG
         if hasAnyChest() then
             print("📦 VẪN CÒN RƯƠNG KHÁC, TIẾP TỤC NHẶT...")
             chestWaitStart = tick()  -- RESET THỜI GIAN
            			-- KHÔNG HOP, TIẾP TỤC NHẶT
-		  if getgenv().AutoHide then startFly() end
-        else
+		        else
             print("🎯 NHẶT XONG TẤT CẢ RƯƠNG - HOP TÌM SERVER MỚI!")
             waitingForChest = false
-			if getgenv().AutoHide then startFly() end
-            spamHop()
+		            spamHop()
             continue
         end
         -- =======================
         continue
     end
     
-    local elapsed = tick() - chestWaitStart
+        local elapsed = tick() - chestWaitStart
     if elapsed >= 2 then
         print("⚠️ HẾT 2 GIÂY KHÔNG NHẶT ĐƯỢC RƯƠNG - HOP LUÔN!")
         waitingForChest = false
+        hasTeleportedToChest = false
+			if getgenv().AutoHide then startFly() end
         spamHop()
         continue
     end
@@ -1409,6 +1573,8 @@ end
     if not hasAnyChest() then
         print("⚠️ RƯƠNG BIẾN MẤT - HOP TÌM SERVER MỚI!")
         waitingForChest = false
+		hasTeleportedToChest = false
+			if getgenv().AutoHide then startFly() end
         spamHop()
         continue
     end
@@ -1432,7 +1598,7 @@ end
 
 -- ===== TOGGLE CẤT FRUIT =====
 sTab:AddToggle({
-    Name = "TỰ ĐỘNG CẤT FRUIT",
+    Name = "Tự Động Cất Fruit / Eat Magma",
     Default = Settings.autocat,
     Callback = function(Value)
         Settings.autocat = Value
@@ -2365,3 +2531,4 @@ httprequest({
 })
 
 OrionLib:Init()
+
