@@ -397,7 +397,7 @@ local function HasAccessory(accessoryName)
     local character = player.Character
     if not character then return false end
     
-    -- Tìm trong toàn bộ Character (kể cả con cháu)
+    -- Tìm trong toàn bộ Character 
     for _, descendant in ipairs(character:GetDescendants()) do
         if descendant:IsA("Accessory") and descendant.Name == accessoryName then
             return true
