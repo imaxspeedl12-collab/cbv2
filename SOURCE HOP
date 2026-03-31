@@ -1819,7 +1819,7 @@ latTab:AddToggle({
                 while autoTradeEnabled do
                     StartAutoTrade()
                     print("[Trade] Chờ 30 giây trước lần trade tiếp theo...")
-                    wait(0.1)
+                    wait(1)
                 end
             end)
         else
