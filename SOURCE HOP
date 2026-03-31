@@ -1646,11 +1646,11 @@ local Section = latTab:AddSection({
     Name = "CHAN BAO"
 })
 
--- ===== AUTO TRADE ITEM (GIỮ NGUYÊN LOGIC CŨ) =====
+-- ===== AUTO TRADE ITEM (GỬI ĐỒNG THỜI, AI CHẤP NHẬN THÌ TRADE) =====
 local autoTradeEnabled = false
-local isTrading = false
+local isProcessing = false
 
--- Cấu hình trade (GIỮ NGUYÊN CỦA MÀY)
+-- Cấu hình trade
 local TradeConfig = {
     Targets = {
         "HuynhChanBaoXyZ",
@@ -1664,17 +1664,15 @@ local TradeConfig = {
     },
     Delays = {
         AfterInvite = 1.5,
-        AfterGetData = 1,
+        AfterGetData = 0.7,
         BetweenItems = 0.5,
         BeforeReady = 0.2,
-        BetweenTargets = 3,
-        RetryDelay = 5,
+        CheckInterval = 2,  -- 2 giây kiểm tra xem ai đã accept
     },
-    MaxRetries = 3,
 }
 
--- Lấy remote (ĐÃ CÓ SẴN TRONG SCRIPT CHÍNH, KHÔNG CẦN KHAI BÁO LẠI)
--- local Chest = ReplicatedStorage:WaitForChild("Chest")  -- ĐÃ CÓ Ở ĐẦU FILE
+-- Lấy remote (ĐÃ CÓ Ở ĐẦU FILE)
+-- local Chest = ReplicatedStorage:WaitForChild("Chest")
 -- local Remotes = Chest:WaitForChild("Remotes")
 -- local Functions = Remotes:WaitForChild("Functions")
 -- local TradeRequester = Functions:WaitForChild("TradeRequester")
@@ -1709,57 +1707,87 @@ local function SendReady()
     return result
 end
 
+-- Trade với 1 người (sau khi đã có data)
 local function TradeWith(targetName)
     print(string.format("========== BẮT ĐẦU TRADE VỚI %s ==========", targetName))
-    SendTradeRequest(targetName)
-    wait(TradeConfig.Delays.AfterInvite)
+    
+    -- Bước 1: Lấy data trade
     GetTradeData()
     wait(TradeConfig.Delays.AfterGetData)
+    
+    -- Bước 2: Gửi từng item
     for _, item in ipairs(TradeConfig.Items) do
         SendItem(item.Name, item.Amount)
         wait(TradeConfig.Delays.BetweenItems)
     end
+    
     wait(TradeConfig.Delays.BeforeReady)
+    
+    -- Bước 3: Ready
     SendReady()
+    
     print(string.format("========== HOÀN TẤT TRADE VỚI %s ==========", targetName))
+    return true
 end
 
+-- Kiểm tra xem ai đã accept (dùng Get để kiểm tra)
+local function CheckAndTrade(targetName)
+    local success, data = pcall(function()
+        return TradeRequester:InvokeServer("Get")
+    end)
+    
+    if success and data then
+        print(string.format("[Trade] %s đã chấp nhận trade! Bắt đầu gửi item...", targetName))
+        TradeWith(targetName)
+        return true
+    end
+    return false
+end
+
+-- Chạy trade
 local function StartAutoTrade()
-    if isTrading then
-        print("[Trade] Đang trade, không chạy lại!")
+    if isProcessing then
+        print("[Trade] Đang xử lý trade trước đó, bỏ qua!")
         return
     end
     
-    isTrading = true
+    isProcessing = true
     
-    print(string.format("[Trade] Bắt đầu trade với %d người, %d item", #TradeConfig.Targets, #TradeConfig.Items))
+    print(string.format("[Trade] ===== BẮT ĐẦU GỬI LỜI MỜI CHO %d NGƯỜI =====", #TradeConfig.Targets))
     
+    -- GỬI LỜI MỜI ĐỒNG THỜI CHO TẤT CẢ
     for _, target in ipairs(TradeConfig.Targets) do
         SendTradeRequest(target)
         wait(0.3)
     end
     
-    wait(TradeConfig.Delays.AfterInvite)
+    print("[Trade] Đã gửi xong lời mời. Chờ người chấp nhận...")
     
-    local successCount = 0
-    for _, target in ipairs(TradeConfig.Targets) do
-        local success = false
-        for retry = 1, TradeConfig.MaxRetries do
-            pcall(function()
-                TradeWith(target)
-                success = true
-                successCount = successCount + 1
-            end)
-            if success then break else wait(TradeConfig.Delays.RetryDelay) end
+    -- CHỜ AI ĐÓ CHẤP NHẬN (TỐI ĐA 10 GIÂY)
+    local startTime = tick()
+    local traded = false
+    
+    while (tick() - startTime) < 10 and not traded do
+        for _, target in ipairs(TradeConfig.Targets) do
+            if CheckAndTrade(target) then
+                traded = true
+                break
+            end
         end
-        wait(TradeConfig.Delays.BetweenTargets)
+        if not traded then
+            wait(TradeConfig.Delays.CheckInterval)
+        end
     end
     
-    print(string.format("[Trade] Kết thúc: %d/%d thành công", successCount, #TradeConfig.Targets))
-    isTrading = false
+    if not traded then
+        print("[Trade] Không ai chấp nhận trade sau 10 giây!")
+    end
+    
+    print("[Trade] ===== KẾT THÚC ĐỢT TRADE =====")
+    isProcessing = false
 end
 
--- THÊM TOGGLE VÀO TAB (KHÔNG CÓ NÚT BUTTON LỎ)
+-- THÊM TOGGLE VÀO TAB
 latTab:AddToggle({
     Name = "🤝 Tự Động Trade Item",
     Default = true,
@@ -1770,8 +1798,8 @@ latTab:AddToggle({
             spawn(function()
                 while autoTradeEnabled do
                     StartAutoTrade()
-                    print("[Trade] Chờ 30 giây trước lần trade tiếp theo...")
-                    wait(250)
+                    print("[Trade] Chờ 30 giây trước đợt trade tiếp theo...")
+                    wait(30)
                 end
             end)
         else
