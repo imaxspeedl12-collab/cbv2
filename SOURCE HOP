@@ -1646,7 +1646,7 @@ local Section = latTab:AddSection({
     Name = "CHAN BAO"
 })
 
--- ===== AUTO TRADE ITEM (GỬI CẢ 2, KHÔNG CHỜ) =====
+-- ===== AUTO TRADE ITEM (GỬI LỜI MỜI CẢ 2, AI ACCEPT THÌ TRADE) =====
 local autoTradeEnabled = false
 local isProcessing = false
 
@@ -1654,7 +1654,7 @@ local isProcessing = false
 local TradeConfig = {
     Targets = {
         "HuynhChanBaoXyZ",
-        "Chanbaoweapon2",
+        "ChanBaoWeapon2",
     },
     Items = {
         {Name = "Sea King's Fin", Amount = "999999999"},
@@ -1663,6 +1663,7 @@ local TradeConfig = {
         {Name = "Sea King's Blood", Amount = "999999999"},
     },
     Delays = {
+        AfterInvite = 1.5,
         AfterGetData = 0.7,
         BetweenItems = 0.5,
         BeforeReady = 0.2,
@@ -1726,7 +1727,7 @@ end
 -- Chạy trade
 local function StartAutoTrade()
     if isProcessing then
-        print("[Trade] Đang trade, bỏ qua!")
+        print("[Trade] Đang xử lý, bỏ qua!")
         return
     end
     
@@ -1734,15 +1735,16 @@ local function StartAutoTrade()
     
     print(string.format("[Trade] ===== GỬI LỜI MỜI CHO %d NGƯỜI =====", #TradeConfig.Targets))
     
-    -- GỬI LỜI MỜI CHO TẤT CẢ
+    -- GỬI LỜI MỜI CHO CẢ 2
     for _, target in ipairs(TradeConfig.Targets) do
         SendTradeRequest(target)
         wait(0.3)
     end
     
-    -- KHÔNG CHỜ, LẬP TỨC KIỂM TRA VÀ TRADE VỚI AI ĐÃ ACCEPT
-    print("[Trade] Kiểm tra ai đã chấp nhận...")
+    print(string.format("[Trade] Chờ %d giây để họ chấp nhận...", TradeConfig.Delays.AfterInvite))
+    wait(TradeConfig.Delays.AfterInvite)
     
+    -- KIỂM TRA VÀ TRADE VỚI AI ĐÃ ACCEPT
     for _, target in ipairs(TradeConfig.Targets) do
         local success, data = pcall(function()
             return TradeRequester:InvokeServer("Get")
@@ -1752,11 +1754,11 @@ local function StartAutoTrade()
             print(string.format("[Trade] ✅ %s đã chấp nhận! Tiến hành trade...", target))
             TradeWith(target)
         else
-            print(string.format("[Trade] ❌ %s chưa chấp nhận hoặc không online", target))
+            print(string.format("[Trade] ❌ %s chưa chấp nhận", target))
         end
     end
     
-    print("[Trade] ===== KẾT THÚC ĐỢT TRADE =====")
+    print("[Trade] ===== KẾT THÚC =====")
     isProcessing = false
 end
 
