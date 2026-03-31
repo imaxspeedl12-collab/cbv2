@@ -1,4 +1,4 @@
-print("CBX")
+print("no pain no gain")
 local players = game:GetService("Players")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -349,7 +349,8 @@ local serverName = currentServer and currentServer.Name or "Không xác định"
 local jobId = currentJobId
 
 local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/imaxspeedl12-collab/orionlib/refs/heads/main/orionlib", true))()
-
+print("⏳ Chờ 5 giây để game ổn định trước khi bắt đầu...")
+task.wait(5)
 
 --Hàm Nhận Event Daily
 game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("GetRewards"):InvokeServer()
