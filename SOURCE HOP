@@ -354,7 +354,7 @@ local serverName = currentServer and currentServer.Name or "Không xác định"
 local jobId = currentJobId
 
 local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/imaxspeedl12-collab/orionlib/refs/heads/main/orionlib", true))()
-print("⏳ Chờ 5 giây để game ổn định trước khi bắt đầu...")
+print("⏳ Chờ 3.8 giây để game ổn định trước khi bắt đầu...")
 task.wait(3.8)
 
 --Hàm Nhận Event Daily
