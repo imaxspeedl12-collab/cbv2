@@ -355,6 +355,9 @@ task.wait(5)
 --Hàm Nhận Event Daily
 game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("GetRewards"):InvokeServer()
 
+game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("Reward"):InvokeServer()
+
+
 
 --Hàm Dùng Tomoe Taiko
 local args = {
