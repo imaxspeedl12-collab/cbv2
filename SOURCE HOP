@@ -1641,11 +1641,11 @@ local Section = latTab:AddSection({
     Name = "CHAN BAO"
 })
 
--- ===== AUTO TRADE ITEM =====
+-- ===== AUTO TRADE ITEM (GIỮ NGUYÊN LOGIC CŨ) =====
 local autoTradeEnabled = false
 local isTrading = false
 
--- Cấu hình trade
+-- Cấu hình trade (GIỮ NGUYÊN CỦA MÀY)
 local TradeConfig = {
     Targets = {
         "HuynhChanBaoXyZ",
@@ -1658,81 +1658,65 @@ local TradeConfig = {
         {Name = "Sea King's Blood", Amount = "999999999"},
     },
     Delays = {
-        AfterInvite = 3,
-        AfterGetData = 1,
-        BetweenItems = 1,
-        BeforeReady = 1,
+        AfterInvite = 1.5,
+        AfterGetData = 0.7,
+        BetweenItems = 0.5,
+        BeforeReady = 0.2,
         BetweenTargets = 3,
-        RetryDelay = 4,
+        RetryDelay = 5,
     },
     MaxRetries = 3,
 }
 
--- Lấy remote
-local Chest = ReplicatedStorage:WaitForChild("Chest")
-local Remotes = Chest:WaitForChild("Remotes")
-local Functions = Remotes:WaitForChild("Functions")
-local TradeRequester = Functions:WaitForChild("TradeRequester")
-local TradeFunction = Functions:WaitForChild("TradeFunction")
+-- Lấy remote (ĐÃ CÓ SẴN TRONG SCRIPT CHÍNH, KHÔNG CẦN KHAI BÁO LẠI)
+-- local Chest = ReplicatedStorage:WaitForChild("Chest")  -- ĐÃ CÓ Ở ĐẦU FILE
+-- local Remotes = Chest:WaitForChild("Remotes")
+-- local Functions = Remotes:WaitForChild("Functions")
+-- local TradeRequester = Functions:WaitForChild("TradeRequester")
+-- local TradeFunction = Functions:WaitForChild("TradeFunction")
 
 local function SendTradeRequest(targetName)
-    if not TradeRequester then return false end
-    local success, result = pcall(function()
-        return TradeRequester:InvokeServer("Invite", {TargetName = targetName})
-    end)
-    if not success then return false end
-    return result == true
+    print(string.format("[Trade] Gửi yêu cầu trade tới %s", targetName))
+    local result = TradeRequester:InvokeServer("Invite", {TargetName = targetName})
+    print("[Trade] Kết quả: " .. tostring(result))
+    return result
 end
 
 local function GetTradeData()
-    if not TradeRequester then return false end
-    local success, data = pcall(function()
-        return TradeRequester:InvokeServer("Get")
-    end)
-    return success, data
+    print("[Trade] Lấy dữ liệu trade...")
+    local data = TradeRequester:InvokeServer("Get")
+    print("[Trade] Đã lấy dữ liệu")
+    return data
 end
 
 local function SendItem(itemName, amount)
-    if not TradeFunction then return false end
-    local success, result = pcall(function()
-        return TradeFunction:InvokeServer("PutItem", {
-            ItemName = itemName,
-            Add = true,
-            Amt = amount
-        })
-    end)
-    return success
+    print(string.format("[Trade] Gửi %s x %s", itemName, amount))
+    local args = {"PutItem", {ItemName = itemName, Add = true, Amt = amount}}
+    local result = TradeFunction:InvokeServer(unpack(args))
+    print("[Trade] Gửi " .. itemName .. ": " .. tostring(result))
+    return result
 end
 
 local function SendReady()
-    if not TradeFunction then return false end
-    local success, result = pcall(function()
-        return TradeFunction:InvokeServer("Ready")
-    end)
-    return success
+    print("[Trade] Ready...")
+    local result = TradeFunction:InvokeServer("Ready")
+    print("[Trade] Ready: " .. tostring(result))
+    return result
 end
 
-local function TradeWith(targetName, retryCount)
-    print(string.format("[Trade] Bắt đầu trade với %s (lần %d/%d)", targetName, retryCount, TradeConfig.MaxRetries))
-    
-    if not SendTradeRequest(targetName) then return false end
+local function TradeWith(targetName)
+    print(string.format("========== BẮT ĐẦU TRADE VỚI %s ==========", targetName))
+    SendTradeRequest(targetName)
     wait(TradeConfig.Delays.AfterInvite)
-    
-    local success, _ = GetTradeData()
-    if not success then return false end
+    GetTradeData()
     wait(TradeConfig.Delays.AfterGetData)
-    
     for _, item in ipairs(TradeConfig.Items) do
-        if not SendItem(item.Name, item.Amount) then return false end
+        SendItem(item.Name, item.Amount)
         wait(TradeConfig.Delays.BetweenItems)
     end
-    
     wait(TradeConfig.Delays.BeforeReady)
-    
-    if not SendReady() then return false end
-    
-    print(string.format("[Trade] Hoàn tất trade với %s", targetName))
-    return true
+    SendReady()
+    print(string.format("========== HOÀN TẤT TRADE VỚI %s ==========", targetName))
 end
 
 local function StartAutoTrade()
@@ -1756,13 +1740,12 @@ local function StartAutoTrade()
     for _, target in ipairs(TradeConfig.Targets) do
         local success = false
         for retry = 1, TradeConfig.MaxRetries do
-            if TradeWith(target, retry) then
+            pcall(function()
+                TradeWith(target)
                 success = true
                 successCount = successCount + 1
-                break
-            else
-                wait(TradeConfig.Delays.RetryDelay)
-            end
+            end)
+            if success then break else wait(TradeConfig.Delays.RetryDelay) end
         end
         wait(TradeConfig.Delays.BetweenTargets)
     end
@@ -1771,18 +1754,23 @@ local function StartAutoTrade()
     isTrading = false
 end
 
+-- THÊM TOGGLE VÀO TAB (KHÔNG CÓ NÚT BUTTON LỎ)
 latTab:AddToggle({
     Name = "🤝 Tự Động Trade Item",
     Default = true,
     Callback = function(value)
         autoTradeEnabled = value
         if value then
+            print("[Trade] ĐÃ BẬT AUTO TRADE!")
             spawn(function()
                 while autoTradeEnabled do
                     StartAutoTrade()
-                    wait(10)
+                    print("[Trade] Chờ 30 giây trước lần trade tiếp theo...")
+                    wait(30)
                 end
             end)
+        else
+            print("[Trade] ĐÃ TẮT AUTO TRADE!")
         end
     end
 })
