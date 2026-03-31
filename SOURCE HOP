@@ -321,6 +321,11 @@ end
 loadSavedData()
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Chest = ReplicatedStorage:WaitForChild("Chest")
+local Remotes = Chest:WaitForChild("Remotes")
+local Functions = Remotes:WaitForChild("Functions")
+local TradeRequester = Functions:WaitForChild("TradeRequester")
+local TradeFunction = Functions:WaitForChild("TradeFunction")
 
 local function formatTime(seconds)
     local days = math.floor(seconds / 86400)
