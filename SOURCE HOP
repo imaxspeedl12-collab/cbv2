@@ -365,10 +365,52 @@ game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes
 
 
 --Hàm Dùng Tomoe Taiko
-local args = {
-	"Tomoe Taiko"
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("AccessoryEq"):InvokeServer(unpack(args))
+local function HasAccessory(accessoryName)
+    local player = game.Players.LocalPlayer
+    local character = player.Character
+    if not character then return false end
+    
+    -- Tìm trong toàn bộ Character (kể cả con cháu)
+    for _, descendant in ipairs(character:GetDescendants()) do
+        if descendant:IsA("Accessory") and descendant.Name == accessoryName then
+            return true
+        end
+        -- Nếu là Model chứa accessory
+        if descendant:IsA("Model") and descendant.Name == accessoryName then
+            return true
+        end
+        -- Nếu là Part có tên chứa accessory
+        if descendant:IsA("BasePart") and descendant.Name:find(accessoryName) then
+            return true
+        end
+    end
+    
+    return false
+end
+
+-- Biến cờ
+local hasEquippedAccessory = false
+
+local function EquipAccessory()
+    if hasEquippedAccessory then 
+     
+        return 
+    end
+    
+    -- Kiểm tra xem đã có trong Character chưa
+    if HasAccessory("Tomoe Taiko") then
+      
+        hasEquippedAccessory = true
+        return
+    end
+    
+    local args = {"Tomoe Taiko"}
+    game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("AccessoryEq"):InvokeServer(unpack(args))
+    hasEquippedAccessory = true
+  
+end
+
+EquipAccessory()
 
 
 -- Hàm kiểm tra xem đã có vũ khí trong Backpack hoặc Character chưa
