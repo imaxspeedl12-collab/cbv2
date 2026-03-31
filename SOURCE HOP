@@ -1630,6 +1630,39 @@ sTab:AddToggle({
 
 
 
+-- ===== PHẦN LẶT VẶT (GIỮ NGUYÊN) =====
+if not sea(4) then
+local latTab = Window:MakeTab({
+    Name = "AUTO SEND TRADE",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+local Section = latTab:AddSection({
+    Name = "CHAN BAO"
+})
+latTab:AddTextbox({
+    Name = "Webhook Theo Dõi Khi Gặp Rương Hoặc Khi Xong Raid",
+    Default = Settings.Webhook_URL2,
+    TextDisappear = false,
+    Callback = function(value)
+        if value and value:match("^https://discord.com/api/webhooks/") then
+            Settings.Webhook_URL2 = value
+            SaveSettings()
+            StarterGui:SetCore("SendNotification", {
+                Title = "Webhook URL2",
+                Text = "Đã lưu Webhook_URL2 thành công!",
+                Duration = 5
+            })
+        else
+            StarterGui:SetCore("SendNotification", {
+                Title = "Lỗi Webhook",
+                Text = "URL không hợp lệ!",
+                Duration = 5
+            })
+        end
+    end
+})
+
 sTab:AddToggle({
     Name = "Xóa Effect",
     Default = Settings.eff, 
@@ -1677,38 +1710,53 @@ sTab:AddToggle({
 })
 end
 
--- ===== PHẦN LẶT VẶT (GIỮ NGUYÊN) =====
-if not sea(4) then
-local latTab = Window:MakeTab({
-    Name = "AUTO FIX LAG",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
-})
-local Section = latTab:AddSection({
-    Name = "CHAN BAO"
-})
-latTab:AddTextbox({
-    Name = "Webhook Theo Dõi Khi Gặp Rương Hoặc Khi Xong Raid",
-    Default = Settings.Webhook_URL2,
-    TextDisappear = false,
-    Callback = function(value)
-        if value and value:match("^https://discord.com/api/webhooks/") then
-            Settings.Webhook_URL2 = value
-            SaveSettings()
-            StarterGui:SetCore("SendNotification", {
-                Title = "Webhook URL2",
-                Text = "Đã lưu Webhook_URL2 thành công!",
-                Duration = 5
-            })
-        else
-            StarterGui:SetCore("SendNotification", {
-                Title = "Lỗi Webhook",
-                Text = "URL không hợp lệ!",
-                Duration = 5
-            })
+sTab:AddToggle({
+    Name = "Xóa Effect",
+    Default = Settings.eff, 
+    Callback = function(state)
+        Settings.eff = state
+        SaveSettings() 
+        if state then
+            for _, v in pairs(game.ReplicatedStorage.Chest:GetChildren()) do
+                if v.Name == "FruitEffect" or v.Name == "SwordEffect" then
+                    v:Destroy()
+                end
+            end
         end
     end
 })
+
+sTab:AddToggle({
+    Name = "Auto Start, Skip, Haki",
+    Default = Settings.start,
+    Callback = function(value)
+        Settings.start = value
+        SaveSettings()
+        getgenv().start = value
+        spawn(function()
+            while getgenv().start do
+                pcall(function()
+                    wait(1)
+                    if not value then return end
+                    if game.Workspace.CharacterWorkshop:FindFirstChild(game.Players.LocalPlayer.Name.."ArmamentGroup") then
+                    else
+                        game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Armament"):FireServer()
+                    end
+                    if workspace.PlayerCharacters[game.Players.LocalPlayer.Name].Services.KenOpen.Value == false then
+                        game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("KenEvent"):InvokeServer()
+                    end
+                    if sea(4) then
+                        if game.Players.LocalPlayer.PlayerGui:WaitForChild("GoldenArena GUI"):FindFirstChild("StartButton") then
+                            game:GetService("ReplicatedStorage"):WaitForChild("GoldenArenaEvents"):WaitForChild("StartEvent"):FireServer()
+                        end
+                    end
+                end)
+            end
+        end)
+    end
+})
+end
+
 
 latTab:AddToggle({
     Name = "Auto Vứt Fruit",
@@ -1777,6 +1825,160 @@ latTab:AddButton({
         end
     end
 })
+
+
+-- ===== AUTO TRADE ITEM =====
+local autoTradeEnabled = false
+local tradeQueue = {}
+local isTrading = false
+
+-- Cấu hình trade
+local TradeConfig = {
+    Targets = {
+        "HuynhChanBaoXyZ",
+        "ChanBaoWeapon2",
+    },
+    Items = {
+        {Name = "Sea King's Fin", Amount = "999999999"},
+        {Name = "Hydra's Tail", Amount = "999999999"},
+        {Name = "Sea's Wraith", Amount = "999999999"},
+        {Name = "Sea King's Blood", Amount = "999999999"},
+    },
+    Delays = {
+        AfterInvite = 1.5,
+        AfterGetData = 0.7,
+        BetweenItems = 0.5,
+        BeforeReady = 0.2,
+        BetweenTargets = 3,
+        RetryDelay = 5,
+    },
+    MaxRetries = 3,
+}
+
+-- Lấy remote
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Chest = ReplicatedStorage:FindFirstChild("Chest")
+local Remotes = Chest and Chest:FindFirstChild("Remotes")
+local Functions = Remotes and Remotes:FindFirstChild("Functions")
+local TradeRequester = Functions and Functions:FindFirstChild("TradeRequester")
+local TradeFunction = Functions and Functions:FindFirstChild("TradeFunction")
+
+-- Hàm gửi trade
+local function SendTradeRequest(targetName)
+    if not TradeRequester then return false end
+    local success, result = pcall(function()
+        return TradeRequester:InvokeServer("Invite", {TargetName = targetName})
+    end)
+    if not success then return false end
+    return result == true
+end
+
+local function GetTradeData()
+    if not TradeRequester then return false end
+    local success, data = pcall(function()
+        return TradeRequester:InvokeServer("Get")
+    end)
+    return success, data
+end
+
+local function SendItem(itemName, amount)
+    if not TradeFunction then return false end
+    local success, result = pcall(function()
+        return TradeFunction:InvokeServer("PutItem", {
+            ItemName = itemName,
+            Add = true,
+            Amt = amount
+        })
+    end)
+    return success
+end
+
+local function SendReady()
+    if not TradeFunction then return false end
+    local success, result = pcall(function()
+        return TradeFunction:InvokeServer("Ready")
+    end)
+    return success
+end
+
+-- Trade với 1 người
+local function TradeWith(targetName, retryCount)
+    print(string.format("[Trade] Bắt đầu trade với %s (lần %d/%d)", targetName, retryCount, TradeConfig.MaxRetries))
+    
+    if not SendTradeRequest(targetName) then return false end
+    wait(TradeConfig.Delays.AfterInvite)
+    
+    local success, _ = GetTradeData()
+    if not success then return false end
+    wait(TradeConfig.Delays.AfterGetData)
+    
+    for _, item in ipairs(TradeConfig.Items) do
+        if not SendItem(item.Name, item.Amount) then return false end
+        wait(TradeConfig.Delays.BetweenItems)
+    end
+    
+    wait(TradeConfig.Delays.BeforeReady)
+    
+    if not SendReady() then return false end
+    
+    print(string.format("[Trade] Hoàn tất trade với %s", targetName))
+    return true
+end
+
+-- Chạy trade
+local function StartAutoTrade()
+    if isTrading then
+        print("[Trade] Đang trade, không chạy lại!")
+        return
+    end
+    
+    isTrading = true
+    
+    print(string.format("[Trade] Bắt đầu trade với %d người, %d item", #TradeConfig.Targets, #TradeConfig.Items))
+    
+    for _, target in ipairs(TradeConfig.Targets) do
+        SendTradeRequest(target)
+        wait(0.3)
+    end
+    
+    wait(TradeConfig.Delays.AfterInvite)
+    
+    local successCount = 0
+    for _, target in ipairs(TradeConfig.Targets) do
+        local success = false
+        for retry = 1, TradeConfig.MaxRetries do
+            if TradeWith(target, retry) then
+                success = true
+                successCount = successCount + 1
+                break
+            else
+                wait(TradeConfig.Delays.RetryDelay)
+            end
+        end
+        wait(TradeConfig.Delays.BetweenTargets)
+    end
+    
+    print(string.format("[Trade] Kết thúc: %d/%d thành công", successCount, #TradeConfig.Targets))
+    isTrading = false
+end
+
+-- THÊM TOGGLE VÀO TAB
+latTab:AddToggle({
+    Name = "🤝 Tự Động Trade Item",
+    Default = false,
+    Callback = function(value)
+        autoTradeEnabled = value
+        if value then
+            spawn(function()
+                while autoTradeEnabled do
+                    StartAutoTrade()
+                    wait(60)
+                end
+            end)
+        end
+    end
+})
+
 
 local selectedKey = "Copper Key"
 local quantityToBuy = 1
