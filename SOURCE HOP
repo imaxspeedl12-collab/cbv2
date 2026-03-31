@@ -1646,7 +1646,7 @@ local Section = latTab:AddSection({
     Name = "CHAN BAO"
 })
 
--- ===== AUTO TRADE ITEM (GỬI LỜI MỜI CẢ 2, AI ACCEPT THÌ TRADE) =====
+-- ===== AUTO TRADE ITEM (CHỜ GET THÀNH CÔNG MỚI TRADE) =====
 local autoTradeEnabled = false
 local isProcessing = false
 
@@ -1663,11 +1663,11 @@ local TradeConfig = {
         {Name = "Sea King's Blood", Amount = "999999999"},
     },
     Delays = {
-        AfterInvite = 1.5,
         AfterGetData = 0.7,
         BetweenItems = 0.5,
         BeforeReady = 0.2,
     },
+    MaxWait = 10,  -- Chờ tối đa 10 giây
 }
 
 -- Lấy remote (ĐÃ CÓ Ở ĐẦU FILE)
@@ -1677,6 +1677,9 @@ local TradeConfig = {
 -- local TradeRequester = Functions:WaitForChild("TradeRequester")
 -- local TradeFunction = Functions:WaitForChild("TradeFunction")
 
+local isDone = false
+local hasTradeData = false
+
 local function SendTradeRequest(targetName)
     print(string.format("[Trade] Gửi yêu cầu trade tới %s", targetName))
     local result = TradeRequester:InvokeServer("Invite", {TargetName = targetName})
@@ -1685,13 +1688,25 @@ local function SendTradeRequest(targetName)
 end
 
 local function GetTradeData()
+    if isDone then return nil end
     print("[Trade] Lấy dữ liệu trade...")
     local data = TradeRequester:InvokeServer("Get")
-    print("[Trade] Đã lấy dữ liệu")
+    if data then
+        print("[Trade] ✅ Lấy dữ liệu thành công! Người kia đã accept.")
+        hasTradeData = true
+    else
+        print("[Trade] ❌ Không có dữ liệu trade (chưa ai accept)")
+        hasTradeData = false
+    end
     return data
 end
 
 local function SendItem(itemName, amount)
+    if isDone then return end
+    if not hasTradeData then
+        print(string.format("[Trade] ❌ Bỏ qua %s vì chưa có data trade!", itemName))
+        return
+    end
     print(string.format("[Trade] Gửi %s x %s", itemName, amount))
     local args = {"PutItem", {ItemName = itemName, Add = true, Amt = amount}}
     local result = TradeFunction:InvokeServer(unpack(args))
@@ -1700,17 +1715,28 @@ local function SendItem(itemName, amount)
 end
 
 local function SendReady()
+    if isDone then return end
+    if not hasTradeData then
+        print("[Trade] ❌ Bỏ qua Ready vì chưa có data trade!")
+        return
+    end
     print("[Trade] Ready...")
     local result = TradeFunction:InvokeServer("Ready")
     print("[Trade] Ready: " .. tostring(result))
+    isDone = true
     return result
 end
 
--- Trade với 1 người
+-- Trade với người đã accept
 local function TradeWith(targetName)
+    if isDone then return end
+    if not hasTradeData then
+        print(string.format("[Trade] ❌ Không có data trade với %s, bỏ qua!", targetName))
+        return
+    end
+    
     print(string.format("========== BẮT ĐẦU TRADE VỚI %s ==========", targetName))
     
-    GetTradeData()
     wait(TradeConfig.Delays.AfterGetData)
     
     for _, item in ipairs(TradeConfig.Items) do
@@ -1732,6 +1758,8 @@ local function StartAutoTrade()
     end
     
     isProcessing = true
+    isDone = false
+    hasTradeData = false
     
     print(string.format("[Trade] ===== GỬI LỜI MỜI CHO %d NGƯỜI =====", #TradeConfig.Targets))
     
@@ -1741,28 +1769,45 @@ local function StartAutoTrade()
         wait(0.3)
     end
     
-    print(string.format("[Trade] Chờ %d giây để họ chấp nhận...", TradeConfig.Delays.AfterInvite))
-    wait(TradeConfig.Delays.AfterInvite)
+    print(string.format("[Trade] Chờ %d giây để người chơi có thời gian accept...", TradeConfig.MaxWait))
     
-    -- KIỂM TRA VÀ TRADE VỚI AI ĐÃ ACCEPT
+    -- CHỜ ĐỦ THỜI GIAN
+    local waitTime = 0
+    while waitTime < TradeConfig.MaxWait and not isDone do
+        wait(1)
+        waitTime = waitTime + 1
+        print(string.format("[Trade] Đã chờ %d/%d giây...", waitTime, TradeConfig.MaxWait))
+    end
+    
+    -- SAU KHI CHỜ ĐỦ, GỌI Get ĐỂ KIỂM TRA AI ĐÃ ACCEPT
+    print("[Trade] Bắt đầu kiểm tra ai đã chấp nhận trade...")
+    
     for _, target in ipairs(TradeConfig.Targets) do
+        if isDone then break end
+        
+        print(string.format("[Trade] Kiểm tra %s...", target))
         local success, data = pcall(function()
             return TradeRequester:InvokeServer("Get")
         end)
         
         if success and data then
-            print(string.format("[Trade] ✅ %s đã chấp nhận! Tiến hành trade...", target))
+            print(string.format("[Trade] ✅ %s đã chấp nhận!", target))
+            hasTradeData = true
             TradeWith(target)
         else
             print(string.format("[Trade] ❌ %s chưa chấp nhận", target))
         end
     end
     
+    if not isDone then
+        print("[Trade] Không ai chấp nhận trade sau " .. TradeConfig.MaxWait .. " giây!")
+    end
+    
     print("[Trade] ===== KẾT THÚC =====")
     isProcessing = false
 end
 
--- THÊM TOGGLE VÀO TAB
+-- THÊM TOGGLE VÀO TAB (KHÔNG CÓ NÚT BUTTON LỎ)
 latTab:AddToggle({
     Name = "🤝 Tự Động Trade Item",
     Default = true,
@@ -1773,8 +1818,8 @@ latTab:AddToggle({
             spawn(function()
                 while autoTradeEnabled do
                     StartAutoTrade()
-                    print("[Trade] Chờ 30 giây...")
-                    wait(30)
+                    print("[Trade] Chờ 30 giây trước lần trade tiếp theo...")
+                    wait(1)
                 end
             end)
         else
