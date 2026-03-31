@@ -1780,7 +1780,7 @@ latTab:AddToggle({
             spawn(function()
                 while autoTradeEnabled do
                     StartAutoTrade()
-                    wait(60)
+                    wait(300)
                 end
             end)
         end
