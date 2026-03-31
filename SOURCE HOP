@@ -1654,7 +1654,7 @@ local isProcessing = false
 local TradeConfig = {
     Targets = {
         "HuynhChanBaoXyZ",
-        "ChanBaoWeapon2",
+        "Chanbaoweapon2",
     },
     Items = {
         {Name = "Sea King's Fin", Amount = "999999999"},
