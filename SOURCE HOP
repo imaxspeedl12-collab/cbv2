@@ -1646,7 +1646,7 @@ local Section = latTab:AddSection({
     Name = "CHAN BAO"
 })
 
--- ===== AUTO TRADE ITEM (GỬI ĐỒNG THỜI, AI CHẤP NHẬN THÌ TRADE) =====
+-- ===== AUTO TRADE ITEM (AI ACCEPT TRƯỚC THÌ TRADE TRƯỚC) =====
 local autoTradeEnabled = false
 local isProcessing = false
 
@@ -1667,7 +1667,7 @@ local TradeConfig = {
         AfterGetData = 0.7,
         BetweenItems = 0.5,
         BeforeReady = 0.2,
-        CheckInterval = 2,  -- 2 giây kiểm tra xem ai đã accept
+        CheckInterval = 1,  -- Kiểm tra mỗi 1 giây
     },
 }
 
@@ -1707,41 +1707,48 @@ local function SendReady()
     return result
 end
 
--- Trade với 1 người (sau khi đã có data)
+-- Trade với 1 người
 local function TradeWith(targetName)
     print(string.format("========== BẮT ĐẦU TRADE VỚI %s ==========", targetName))
     
-    -- Bước 1: Lấy data trade
     GetTradeData()
     wait(TradeConfig.Delays.AfterGetData)
     
-    -- Bước 2: Gửi từng item
     for _, item in ipairs(TradeConfig.Items) do
         SendItem(item.Name, item.Amount)
         wait(TradeConfig.Delays.BetweenItems)
     end
     
     wait(TradeConfig.Delays.BeforeReady)
-    
-    -- Bước 3: Ready
     SendReady()
     
     print(string.format("========== HOÀN TẤT TRADE VỚI %s ==========", targetName))
     return true
 end
 
--- Kiểm tra xem ai đã accept (dùng Get để kiểm tra)
-local function CheckAndTrade(targetName)
-    local success, data = pcall(function()
-        return TradeRequester:InvokeServer("Get")
-    end)
+-- Kiểm tra xem ai đã accept (dùng Get)
+local function CheckWhoAccepted()
+    -- Tạo bản sao ngẫu nhiên của danh sách để không ưu tiên ai
+    local shuffledTargets = {}
+    for _, v in ipairs(TradeConfig.Targets) do table.insert(shuffledTargets, v) end
     
-    if success and data then
-        print(string.format("[Trade] %s đã chấp nhận trade! Bắt đầu gửi item...", targetName))
-        TradeWith(targetName)
-        return true
+    -- Xáo trộn ngẫu nhiên
+    for i = #shuffledTargets, 2, -1 do
+        local j = math.random(i)
+        shuffledTargets[i], shuffledTargets[j] = shuffledTargets[j], shuffledTargets[i]
     end
-    return false
+    
+    for _, target in ipairs(shuffledTargets) do
+        local success, data = pcall(function()
+            return TradeRequester:InvokeServer("Get")
+        end)
+        
+        if success and data then
+            print(string.format("[Trade] %s đã chấp nhận trade!", target))
+            return target, true
+        end
+    end
+    return nil, false
 end
 
 -- Chạy trade
@@ -1753,34 +1760,32 @@ local function StartAutoTrade()
     
     isProcessing = true
     
-    print(string.format("[Trade] ===== BẮT ĐẦU GỬI LỜI MỜI CHO %d NGƯỜI =====", #TradeConfig.Targets))
+    print(string.format("[Trade] ===== GỬI LỜI MỜI CHO %d NGƯỜI =====", #TradeConfig.Targets))
     
-    -- GỬI LỜI MỜI ĐỒNG THỜI CHO TẤT CẢ
+    -- GỬI LỜI MỜI ĐỒNG THỜI
     for _, target in ipairs(TradeConfig.Targets) do
         SendTradeRequest(target)
         wait(0.3)
     end
     
-    print("[Trade] Đã gửi xong lời mời. Chờ người chấp nhận...")
+    print("[Trade] Đã gửi xong. Chờ người đầu tiên chấp nhận...")
     
-    -- CHỜ AI ĐÓ CHẤP NHẬN (TỐI ĐA 10 GIÂY)
+    -- CHỜ NGƯỜI ĐẦU TIÊN ACCEPT (TỐI ĐA 10 GIÂY)
     local startTime = tick()
-    local traded = false
+    local acceptedTarget = nil
     
-    while (tick() - startTime) < 10 and not traded do
-        for _, target in ipairs(TradeConfig.Targets) do
-            if CheckAndTrade(target) then
-                traded = true
-                break
-            end
-        end
-        if not traded then
+    while (tick() - startTime) < 10 and not acceptedTarget do
+        acceptedTarget, _ = CheckWhoAccepted()
+        if not acceptedTarget then
             wait(TradeConfig.Delays.CheckInterval)
         end
     end
     
-    if not traded then
-        print("[Trade] Không ai chấp nhận trade sau 10 giây!")
+    if acceptedTarget then
+        print(string.format("[Trade] 🔥 %s đã chấp nhận trước! Tiến hành trade...", acceptedTarget))
+        TradeWith(acceptedTarget)
+    else
+        print("[Trade] ❌ Không ai chấp nhận trade sau 10 giây!")
     end
     
     print("[Trade] ===== KẾT THÚC ĐỢT TRADE =====")
