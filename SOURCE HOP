@@ -1659,11 +1659,11 @@ local TradeConfig = {
     },
     Delays = {
         AfterInvite = 1.5,
-        AfterGetData = 0.7,
-        BetweenItems = 0.5,
-        BeforeReady = 0.2,
+        AfterGetData = 1,
+        BetweenItems = 0.8,
+        BeforeReady = 0.5,
         BetweenTargets = 3,
-        RetryDelay = 5,
+        RetryDelay = 4,
     },
     MaxRetries = 3,
 }
@@ -1780,7 +1780,7 @@ latTab:AddToggle({
             spawn(function()
                 while autoTradeEnabled do
                     StartAutoTrade()
-                    wait(300)
+                    wait(10)
                 end
             end)
         end
