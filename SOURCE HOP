@@ -1667,7 +1667,7 @@ local TradeConfig = {
         BetweenItems = 0.5,
         BeforeReady = 0.2,
     },
-    MaxWait = 6,  -- Chờ tối đa 10 giây
+    MaxWait = 3 ,  -- Chờ tối đa 5 giây
 }
 
 -- Lấy remote (ĐÃ CÓ Ở ĐẦU FILE)
@@ -1819,7 +1819,7 @@ latTab:AddToggle({
                 while autoTradeEnabled do
                     StartAutoTrade()
                     print("[Trade] Chờ 30 giây trước lần trade tiếp theo...")
-                    wait(0.5)
+                    wait(0.1)
                 end
             end)
         else
