@@ -1669,11 +1669,11 @@ local TradeConfig = {
 }
 
 -- Lấy remote
-local Chest = ReplicatedStorage:FindFirstChild("Chest")
-local Remotes = Chest and Chest:FindFirstChild("Remotes")
-local Functions = Remotes and Remotes:FindFirstChild("Functions")
-local TradeRequester = Functions and Functions:FindFirstChild("TradeRequester")
-local TradeFunction = Functions and Functions:FindFirstChild("TradeFunction")
+local Chest = ReplicatedStorage:WaitForChild("Chest")
+local Remotes = Chest:WaitForChild("Remotes")
+local Functions = Remotes:WaitForChild("Functions")
+local TradeRequester = Functions:WaitForChild("TradeRequester")
+local TradeFunction = Functions:WaitForChild("TradeFunction")
 
 local function SendTradeRequest(targetName)
     if not TradeRequester then return false end
