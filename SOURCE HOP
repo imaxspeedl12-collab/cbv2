@@ -1632,7 +1632,7 @@ sTab:AddToggle({
 
 -- ===== AUTO FIX LAG & TRADE TAB =====
 local latTab = Window:MakeTab({
-    Name = "AUTO SEND TRADE",
+    Name = "AUTO SMART",
     Icon = "rbxassetid://4483345998",
     PremiumOnly = false
 })
