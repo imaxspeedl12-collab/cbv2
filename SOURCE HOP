@@ -354,15 +354,42 @@ local serverName = currentServer and currentServer.Name or "Không xác định"
 local jobId = currentJobId
 
 local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/imaxspeedl12-collab/orionlib/refs/heads/main/orionlib", true))()
-print("⏳ Chờ 3.8 giây để game ổn định trước khi bắt đầu...")
-task.wait(3.8)
+print("⏳ Chờ 3 giây để game ổn định trước khi bắt đầu...")
+task.wait(3)
 
 --Hàm Nhận Event Daily
 game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("GetRewards"):InvokeServer()
 
 game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("Reward"):InvokeServer()
 
+-- Mua ngay lập tức
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Functions = ReplicatedStorage:WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions")
+local BuyFruitStock = Functions:WaitForChild("BuyFruitStock")
+local CheckQuest = Functions:WaitForChild("CheckQuest")
 
+-- Mở shop
+CheckQuest:InvokeServer(workspace:WaitForChild("AllNPC"):WaitForChild("DFruitShop"))
+wait(1)
+
+-- Danh sách trái
+local FruitsToBuy = {
+    "TreeTree", "GateGate", "MelodyMelody", "DoughDough",
+    "DemonDemon", "PhoenixPhoenix", "DragonDragon", "PterPter", "MagmaMagma"
+}
+
+-- Mua từng trái
+for _, fruit in ipairs(FruitsToBuy) do
+    local success, result = pcall(function()
+        return BuyFruitStock:InvokeServer(fruit)
+    end)
+    if success then
+        print("✅ Mua được: " .. fruit)
+    else
+        print("❌ Không mua được: " .. fruit .. " - " .. tostring(result))
+    end
+    wait(0.5)
+end
 
 --Hàm Dùng Tomoe Taiko
 local function HasAccessory(accessoryName)
