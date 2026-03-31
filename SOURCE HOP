@@ -1664,7 +1664,7 @@ local TradeConfig = {
     },
     Delays = {
         AfterInvite = 1.5,
-        AfterGetData = 0.7,
+        AfterGetData = 1.2,
         BetweenItems = 0.5,
         BeforeReady = 0.2,
         BetweenTargets = 3,
