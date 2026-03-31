@@ -1658,10 +1658,10 @@ local TradeConfig = {
         {Name = "Sea King's Blood", Amount = "999999999"},
     },
     Delays = {
-        AfterInvite = 2,
+        AfterInvite = 3,
         AfterGetData = 1,
-        BetweenItems = 0.8,
-        BeforeReady = 0.5,
+        BetweenItems = 1,
+        BeforeReady = 1,
         BetweenTargets = 3,
         RetryDelay = 4,
     },
