@@ -1811,6 +1811,8 @@ latTab:AddToggle({
         SaveSettings()
         getgenv().start = value
         spawn(function()
+        -- 👈 THÊM NHỊP NGHỈ ĐẦU TIÊN
+            wait(5)  -- Đợi 5 giây cho game load
             while getgenv().start do
                 pcall(function()
                     wait(1)
