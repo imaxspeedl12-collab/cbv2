@@ -1731,7 +1731,7 @@ end
 
 local function GetTradeData()
     if isDone then return nil end
-    print("[Trade] Lấy dữ liệu trade...")
+   
     local data = TradeRequester:InvokeServer("Get")
     if data then
       
@@ -1749,10 +1749,10 @@ local function SendItem(itemName, amount)
 
         return
     end
-    print(string.format("[Trade] Gửi %s x %s", itemName, amount))
+  
     local args = {"PutItem", {ItemName = itemName, Add = true, Amt = amount}}
     local result = TradeFunction:InvokeServer(unpack(args))
-    print("[Trade] Gửi " .. itemName .. ": " .. tostring(result))
+   
     return result
 end
 
@@ -1762,9 +1762,9 @@ local function SendReady()
       
         return
     end
-    print("[Trade] Ready...")
+   
     local result = TradeFunction:InvokeServer("Ready")
-    print("[Trade] Ready: " .. tostring(result))
+    
     isDone = true
     return result
 end
@@ -1777,7 +1777,7 @@ local function TradeWith(targetName)
         return
     end
     
-    print(string.format("========== BẮT ĐẦU TRADE VỚI %s ==========", targetName))
+    
     
     wait(TradeConfig.Delays.AfterGetData)
     
@@ -1789,13 +1789,13 @@ local function TradeWith(targetName)
     wait(TradeConfig.Delays.BeforeReady)
     SendReady()
     
-    print(string.format("========== HOÀN TẤT TRADE VỚI %s ==========", targetName))
+  
 end
 
 -- Chạy trade
 local function StartAutoTrade()
     if isProcessing then
-        print("[Trade] Đang xử lý, bỏ qua!")
+       
         return
     end
     
@@ -1822,12 +1822,12 @@ local function StartAutoTrade()
     end
     
     -- SAU KHI CHỜ ĐỦ, GỌI Get ĐỂ KIỂM TRA AI ĐÃ ACCEPT
-    print("[Trade] Bắt đầu kiểm tra ai đã chấp nhận trade...")
+    
     
     for _, target in ipairs(TradeConfig.Targets) do
         if isDone then break end
         
-        print(string.format("[Trade] Kiểm tra %s...", target))
+       
         local success, data = pcall(function()
             return TradeRequester:InvokeServer("Get")
         end)
@@ -1845,7 +1845,7 @@ local function StartAutoTrade()
         
     end
     
-    print("[Trade] ===== KẾT THÚC =====")
+   
     isProcessing = false
 end
 
@@ -1856,7 +1856,7 @@ latTab:AddToggle({
     Callback = function(value)
         autoTradeEnabled = value
         if value then
-            print("[Trade] ĐÃ BẬT AUTO TRADE!")
+           
             spawn(function()
                 while autoTradeEnabled do
                     StartAutoTrade()
@@ -1865,7 +1865,7 @@ latTab:AddToggle({
                 end
             end)
         else
-            print("[Trade] ĐÃ TẮT AUTO TRADE!")
+           
         end
     end
 })
