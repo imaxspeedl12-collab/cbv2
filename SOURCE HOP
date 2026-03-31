@@ -371,16 +371,58 @@ local args = {
 game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("AccessoryEq"):InvokeServer(unpack(args))
 
 
---Hàm Dùng ATK
-local args = {
-	"EquipWeapon",
-	{
-		WeaponName = "Authentic Triple Katana",
-		Type = "Primary"
-	}
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("EtcFunction"):InvokeServer(unpack(args))
+-- Hàm kiểm tra xem đã có vũ khí trong Backpack hoặc Character chưa
+local function IsWeaponEquipped(weaponName)
+    local player = game.Players.LocalPlayer
+    
+    -- Kiểm tra trong Character (đang cầm)
+    local character = player.Character
+    if character then
+        for _, tool in ipairs(character:GetChildren()) do
+            if tool:IsA("Tool") and tool.Name == weaponName then
+                return true
+            end
+        end
+    end
+    
+    -- Kiểm tra trong Backpack (túi đồ)
+    local backpack = player:FindFirstChild("Backpack")
+    if backpack then
+        for _, tool in ipairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") and tool.Name == weaponName then
+                return true
+            end
+        end
+    end
+    
+    return false
+end
 
+-- Dùng biến cờ để chỉ equip 1 lần (cách an toàn nhất)
+local hasEquipped = false
+
+local function EquipWeapon()
+    if hasEquipped then return end
+    
+    -- Kiểm tra xem đã có chưa
+    if IsWeaponEquipped("Authentic Triple Katana") then
+              hasEquipped = true
+        return
+    end
+    
+    local args = {
+        "EquipWeapon",
+        {
+            WeaponName = "Authentic Triple Katana",
+            Type = "Primary"
+        }
+    }
+    game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("EtcFunction"):InvokeServer(unpack(args))
+    hasEquipped = true
+ end
+
+-- Gọi hàm
+EquipWeapon()
 
 --Hàm Nâng Stat Fruit--
 task.spawn(function()
@@ -1681,9 +1723,9 @@ local isDone = false
 local hasTradeData = false
 
 local function SendTradeRequest(targetName)
-    print(string.format("[Trade] Gửi yêu cầu trade tới %s", targetName))
+  
     local result = TradeRequester:InvokeServer("Invite", {TargetName = targetName})
-    print("[Trade] Kết quả: " .. tostring(result))
+ 
     return result
 end
 
@@ -1692,10 +1734,10 @@ local function GetTradeData()
     print("[Trade] Lấy dữ liệu trade...")
     local data = TradeRequester:InvokeServer("Get")
     if data then
-        print("[Trade] ✅ Lấy dữ liệu thành công! Người kia đã accept.")
+      
         hasTradeData = true
     else
-        print("[Trade] ❌ Không có dữ liệu trade (chưa ai accept)")
+      
         hasTradeData = false
     end
     return data
@@ -1704,7 +1746,7 @@ end
 local function SendItem(itemName, amount)
     if isDone then return end
     if not hasTradeData then
-        print(string.format("[Trade] ❌ Bỏ qua %s vì chưa có data trade!", itemName))
+
         return
     end
     print(string.format("[Trade] Gửi %s x %s", itemName, amount))
@@ -1717,7 +1759,7 @@ end
 local function SendReady()
     if isDone then return end
     if not hasTradeData then
-        print("[Trade] ❌ Bỏ qua Ready vì chưa có data trade!")
+      
         return
     end
     print("[Trade] Ready...")
@@ -1731,7 +1773,7 @@ end
 local function TradeWith(targetName)
     if isDone then return end
     if not hasTradeData then
-        print(string.format("[Trade] ❌ Không có data trade với %s, bỏ qua!", targetName))
+      
         return
     end
     
@@ -1761,7 +1803,7 @@ local function StartAutoTrade()
     isDone = false
     hasTradeData = false
     
-    print(string.format("[Trade] ===== GỬI LỜI MỜI CHO %d NGƯỜI =====", #TradeConfig.Targets))
+  
     
     -- GỬI LỜI MỜI CHO CẢ 2
     for _, target in ipairs(TradeConfig.Targets) do
@@ -1769,14 +1811,14 @@ local function StartAutoTrade()
         wait(0.3)
     end
     
-    print(string.format("[Trade] Chờ %d giây để người chơi có thời gian accept...", TradeConfig.MaxWait))
+  
     
     -- CHỜ ĐỦ THỜI GIAN
     local waitTime = 0
     while waitTime < TradeConfig.MaxWait and not isDone do
         wait(1)
         waitTime = waitTime + 1
-        print(string.format("[Trade] Đã chờ %d/%d giây...", waitTime, TradeConfig.MaxWait))
+      
     end
     
     -- SAU KHI CHỜ ĐỦ, GỌI Get ĐỂ KIỂM TRA AI ĐÃ ACCEPT
@@ -1791,16 +1833,16 @@ local function StartAutoTrade()
         end)
         
         if success and data then
-            print(string.format("[Trade] ✅ %s đã chấp nhận!", target))
+          
             hasTradeData = true
             TradeWith(target)
         else
-            print(string.format("[Trade] ❌ %s chưa chấp nhận", target))
+          
         end
     end
     
     if not isDone then
-        print("[Trade] Không ai chấp nhận trade sau " .. TradeConfig.MaxWait .. " giây!")
+        
     end
     
     print("[Trade] ===== KẾT THÚC =====")
@@ -1818,7 +1860,7 @@ latTab:AddToggle({
             spawn(function()
                 while autoTradeEnabled do
                     StartAutoTrade()
-                    print("[Trade] Chờ 30 giây trước lần trade tiếp theo...")
+                    
                     wait(4)
                 end
             end)
