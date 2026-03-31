@@ -1646,7 +1646,7 @@ local Section = latTab:AddSection({
     Name = "CHAN BAO"
 })
 
--- ===== AUTO TRADE ITEM (AI ACCEPT TRƯỚC THÌ TRADE TRƯỚC) =====
+-- ===== AUTO TRADE ITEM (GỬI CẢ 2, KHÔNG CHỜ) =====
 local autoTradeEnabled = false
 local isProcessing = false
 
@@ -1663,11 +1663,9 @@ local TradeConfig = {
         {Name = "Sea King's Blood", Amount = "999999999"},
     },
     Delays = {
-        AfterInvite = 1.5,
         AfterGetData = 0.7,
         BetweenItems = 0.5,
         BeforeReady = 0.2,
-        CheckInterval = 1,  -- Kiểm tra mỗi 1 giây
     },
 }
 
@@ -1723,38 +1721,12 @@ local function TradeWith(targetName)
     SendReady()
     
     print(string.format("========== HOÀN TẤT TRADE VỚI %s ==========", targetName))
-    return true
-end
-
--- Kiểm tra xem ai đã accept (dùng Get)
-local function CheckWhoAccepted()
-    -- Tạo bản sao ngẫu nhiên của danh sách để không ưu tiên ai
-    local shuffledTargets = {}
-    for _, v in ipairs(TradeConfig.Targets) do table.insert(shuffledTargets, v) end
-    
-    -- Xáo trộn ngẫu nhiên
-    for i = #shuffledTargets, 2, -1 do
-        local j = math.random(i)
-        shuffledTargets[i], shuffledTargets[j] = shuffledTargets[j], shuffledTargets[i]
-    end
-    
-    for _, target in ipairs(shuffledTargets) do
-        local success, data = pcall(function()
-            return TradeRequester:InvokeServer("Get")
-        end)
-        
-        if success and data then
-            print(string.format("[Trade] %s đã chấp nhận trade!", target))
-            return target, true
-        end
-    end
-    return nil, false
 end
 
 -- Chạy trade
 local function StartAutoTrade()
     if isProcessing then
-        print("[Trade] Đang xử lý trade trước đó, bỏ qua!")
+        print("[Trade] Đang trade, bỏ qua!")
         return
     end
     
@@ -1762,30 +1734,26 @@ local function StartAutoTrade()
     
     print(string.format("[Trade] ===== GỬI LỜI MỜI CHO %d NGƯỜI =====", #TradeConfig.Targets))
     
-    -- GỬI LỜI MỜI ĐỒNG THỜI
+    -- GỬI LỜI MỜI CHO TẤT CẢ
     for _, target in ipairs(TradeConfig.Targets) do
         SendTradeRequest(target)
         wait(0.3)
     end
     
-    print("[Trade] Đã gửi xong. Chờ người đầu tiên chấp nhận...")
+    -- KHÔNG CHỜ, LẬP TỨC KIỂM TRA VÀ TRADE VỚI AI ĐÃ ACCEPT
+    print("[Trade] Kiểm tra ai đã chấp nhận...")
     
-    -- CHỜ NGƯỜI ĐẦU TIÊN ACCEPT (TỐI ĐA 10 GIÂY)
-    local startTime = tick()
-    local acceptedTarget = nil
-    
-    while (tick() - startTime) < 10 and not acceptedTarget do
-        acceptedTarget, _ = CheckWhoAccepted()
-        if not acceptedTarget then
-            wait(TradeConfig.Delays.CheckInterval)
+    for _, target in ipairs(TradeConfig.Targets) do
+        local success, data = pcall(function()
+            return TradeRequester:InvokeServer("Get")
+        end)
+        
+        if success and data then
+            print(string.format("[Trade] ✅ %s đã chấp nhận! Tiến hành trade...", target))
+            TradeWith(target)
+        else
+            print(string.format("[Trade] ❌ %s chưa chấp nhận hoặc không online", target))
         end
-    end
-    
-    if acceptedTarget then
-        print(string.format("[Trade] 🔥 %s đã chấp nhận trước! Tiến hành trade...", acceptedTarget))
-        TradeWith(acceptedTarget)
-    else
-        print("[Trade] ❌ Không ai chấp nhận trade sau 10 giây!")
     end
     
     print("[Trade] ===== KẾT THÚC ĐỢT TRADE =====")
@@ -1803,7 +1771,7 @@ latTab:AddToggle({
             spawn(function()
                 while autoTradeEnabled do
                     StartAutoTrade()
-                    print("[Trade] Chờ 30 giây trước đợt trade tiếp theo...")
+                    print("[Trade] Chờ 30 giây...")
                     wait(30)
                 end
             end)
