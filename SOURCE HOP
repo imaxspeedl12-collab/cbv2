@@ -1632,151 +1632,13 @@ sTab:AddToggle({
 
 -- ===== AUTO FIX LAG & TRADE TAB =====
 local latTab = Window:MakeTab({
-    Name = "AUTO FIX LAG",
+    Name = "AUTO SEND TRADE",
     Icon = "rbxassetid://4483345998",
     PremiumOnly = false
 })
 
 local Section = latTab:AddSection({
     Name = "CHAN BAO"
-})
-
-latTab:AddTextbox({
-    Name = "Webhook Theo Dõi Khi Gặp Rương Hoặc Khi Xong Raid",
-    Default = Settings.Webhook_URL2,
-    TextDisappear = false,
-    Callback = function(value)
-        if value and value:match("^https://discord.com/api/webhooks/") then
-            Settings.Webhook_URL2 = value
-            SaveSettings()
-            StarterGui:SetCore("SendNotification", {
-                Title = "Webhook URL2",
-                Text = "Đã lưu Webhook_URL2 thành công!",
-                Duration = 5
-            })
-        else
-            StarterGui:SetCore("SendNotification", {
-                Title = "Lỗi Webhook",
-                Text = "URL không hợp lệ!",
-                Duration = 5
-            })
-        end
-    end
-})
-
-latTab:AddToggle({
-    Name = "Xóa Effect",
-    Default = Settings.eff, 
-    Callback = function(state)
-        Settings.eff = state
-        SaveSettings() 
-        if state then
-            for _, v in pairs(game.ReplicatedStorage.Chest:GetChildren()) do
-                if v.Name == "FruitEffect" or v.Name == "SwordEffect" then
-                    v:Destroy()
-                end
-            end
-        end
-    end
-})
-
-latTab:AddToggle({
-    Name = "Auto Start, Skip, Haki",
-    Default = Settings.start,
-    Callback = function(value)
-        Settings.start = value
-        SaveSettings()
-        getgenv().start = value
-        spawn(function()
-            while getgenv().start do
-                pcall(function()
-                    wait(1)
-                    if not value then return end
-                    if game.Workspace.CharacterWorkshop:FindFirstChild(game.Players.LocalPlayer.Name.."ArmamentGroup") then
-                    else
-                        game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Armament"):FireServer()
-                    end
-                    if workspace.PlayerCharacters[game.Players.LocalPlayer.Name].Services.KenOpen.Value == false then
-                        game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("KenEvent"):InvokeServer()
-                    end
-                    if sea(4) then
-                        if game.Players.LocalPlayer.PlayerGui:WaitForChild("GoldenArena GUI"):FindFirstChild("StartButton") then
-                            game:GetService("ReplicatedStorage"):WaitForChild("GoldenArenaEvents"):WaitForChild("StartEvent"):FireServer()
-                        end
-                    end
-                end)
-            end
-        end)
-    end
-})
-
-latTab:AddToggle({
-    Name = "Auto Vứt Fruit",
-    Default = Settings.dropfruit,
-    Callback = function(value)
-        Settings.dropfruit = value
-        SaveSettings()
-        getgenv().AutoDrop = value
-        local player = game:GetService("Players").LocalPlayer
-        local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-
-        local function DropFruit()
-            local backpack = player:FindFirstChild("Backpack")
-            local character = player.Character
-            if not backpack or not humanoid or not character then return end
-            local equippedTool = humanoid:FindFirstChildOfClass("Tool")
-            if not (equippedTool and equippedTool:FindFirstChild("FakeHandle")) then
-                for _, tool in ipairs(backpack:GetChildren()) do
-                    if tool:IsA("Tool") and tool:FindFirstChild("Handle") and tool.Name ~= "LegacyPose" then
-                        humanoid:EquipTool(tool)
-                        task.wait(0.5)
-                        equippedTool = tool
-                        break
-                    end
-                end
-            end
-            if equippedTool and equippedTool:FindFirstChild("Handle") then
-                print("Đang cầm:", equippedTool.Name)
-                game:GetService("VirtualUser"):ClickButton1(Vector2.new(50, 50))
-                wait(1)
-            end
-            if game.Players.LocalPlayer.Character:FindFirstChildOfClass("Tool") then
-                game:GetService("VirtualUser"):ClickButton1(Vector2.new(50, 50))
-                wait(1)
-            end
-            local gui = player:FindFirstChild("PlayerGui") and player.PlayerGui:FindFirstChild("EatFruitBecky")
-            local dropButton = gui and gui:FindFirstChild("Dialogue") and gui.Dialogue:FindFirstChild("Drop")
-            if dropButton then
-                ClickButton(dropButton)
-            end
-            wait(0.8)
-        end
-        spawn(function()
-            while getgenv().AutoDrop do
-                DropFruit()
-                wait()
-            end
-        end)
-    end
-})
-
-latTab:AddButton({
-    Name = "Unlock Passive",
-    Callback = function()
-        local player = game:GetService("Players").LocalPlayer
-        local humanoidRootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        local passiveTree = game:GetService("Workspace"):FindFirstChild("AllNPC") and game.Workspace.AllNPC:FindFirstChild("PassiveTree")
-        local remote = ReplicatedStorage.Chest.Remotes.Functions.EtcFunction
-        if humanoidRootPart and passiveTree then
-            humanoidRootPart.CFrame = passiveTree.CFrame * CFrame.new(10,10,0)
-            wait(1)
-            local success, result = pcall(function()
-                return remote:InvokeServer("Blessing Passive", {})
-            end)
-        else
-            th.New("Không Tìm Thấy PassiveTree",5)
-        end
-    end
 })
 
 -- ===== AUTO TRADE ITEM =====
@@ -1911,7 +1773,7 @@ end
 
 latTab:AddToggle({
     Name = "🤝 Tự Động Trade Item",
-    Default = false,
+    Default = true,
     Callback = function(value)
         autoTradeEnabled = value
         if value then
@@ -1924,6 +1786,123 @@ latTab:AddToggle({
         end
     end
 })
+
+latTab:AddToggle({
+    Name = "Xóa Effect",
+    Default = Settings.eff, 
+    Callback = function(state)
+        Settings.eff = state
+        SaveSettings() 
+        if state then
+            for _, v in pairs(game.ReplicatedStorage.Chest:GetChildren()) do
+                if v.Name == "FruitEffect" or v.Name == "SwordEffect" then
+                    v:Destroy()
+                end
+            end
+        end
+    end
+})
+
+latTab:AddToggle({
+    Name = "Auto Haki",
+    Default = Settings.start,
+    Callback = function(value)
+        Settings.start = value
+        SaveSettings()
+        getgenv().start = value
+        spawn(function()
+            while getgenv().start do
+                pcall(function()
+                    wait(1)
+                    if not value then return end
+                    if game.Workspace.CharacterWorkshop:FindFirstChild(game.Players.LocalPlayer.Name.."ArmamentGroup") then
+                    else
+                        game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Armament"):FireServer()
+                    end
+                    if workspace.PlayerCharacters[game.Players.LocalPlayer.Name].Services.KenOpen.Value == false then
+                        game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("KenEvent"):InvokeServer()
+                    end
+                    if sea(4) then
+                        if game.Players.LocalPlayer.PlayerGui:WaitForChild("GoldenArena GUI"):FindFirstChild("StartButton") then
+                            game:GetService("ReplicatedStorage"):WaitForChild("GoldenArenaEvents"):WaitForChild("StartEvent"):FireServer()
+                        end
+                    end
+                end)
+            end
+        end)
+    end
+})
+
+latTab:AddToggle({
+    Name = "Auto Vứt Fruit",
+    Default = Settings.dropfruit,
+    Callback = function(value)
+        Settings.dropfruit = value
+        SaveSettings()
+        getgenv().AutoDrop = value
+        local player = game:GetService("Players").LocalPlayer
+        local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+
+        local function DropFruit()
+            local backpack = player:FindFirstChild("Backpack")
+            local character = player.Character
+            if not backpack or not humanoid or not character then return end
+            local equippedTool = humanoid:FindFirstChildOfClass("Tool")
+            if not (equippedTool and equippedTool:FindFirstChild("FakeHandle")) then
+                for _, tool in ipairs(backpack:GetChildren()) do
+                    if tool:IsA("Tool") and tool:FindFirstChild("Handle") and tool.Name ~= "LegacyPose" then
+                        humanoid:EquipTool(tool)
+                        task.wait(0.5)
+                        equippedTool = tool
+                        break
+                    end
+                end
+            end
+            if equippedTool and equippedTool:FindFirstChild("Handle") then
+                print("Đang cầm:", equippedTool.Name)
+                game:GetService("VirtualUser"):ClickButton1(Vector2.new(50, 50))
+                wait(1)
+            end
+            if game.Players.LocalPlayer.Character:FindFirstChildOfClass("Tool") then
+                game:GetService("VirtualUser"):ClickButton1(Vector2.new(50, 50))
+                wait(1)
+            end
+            local gui = player:FindFirstChild("PlayerGui") and player.PlayerGui:FindFirstChild("EatFruitBecky")
+            local dropButton = gui and gui:FindFirstChild("Dialogue") and gui.Dialogue:FindFirstChild("Drop")
+            if dropButton then
+                ClickButton(dropButton)
+            end
+            wait(0.8)
+        end
+        spawn(function()
+            while getgenv().AutoDrop do
+                DropFruit()
+                wait()
+            end
+        end)
+    end
+})
+
+latTab:AddButton({
+    Name = "Unlock Passive",
+    Callback = function()
+        local player = game:GetService("Players").LocalPlayer
+        local humanoidRootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        local passiveTree = game:GetService("Workspace"):FindFirstChild("AllNPC") and game.Workspace.AllNPC:FindFirstChild("PassiveTree")
+        local remote = ReplicatedStorage.Chest.Remotes.Functions.EtcFunction
+        if humanoidRootPart and passiveTree then
+            humanoidRootPart.CFrame = passiveTree.CFrame * CFrame.new(10,10,0)
+            wait(1)
+            local success, result = pcall(function()
+                return remote:InvokeServer("Blessing Passive", {})
+            end)
+        else
+            th.New("Không Tìm Thấy PassiveTree",5)
+        end
+    end
+})
+
+
 
 local selectedKey = "Copper Key"
 local quantityToBuy = 1
