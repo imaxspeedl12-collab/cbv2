@@ -354,8 +354,8 @@ local serverName = currentServer and currentServer.Name or "Không xác định"
 local jobId = currentJobId
 
 local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/imaxspeedl12-collab/orionlib/refs/heads/main/orionlib", true))()
-print("⏳ Chờ 3 giây để game ổn định trước khi bắt đầu...")
-task.wait(3)
+print("⏳ Chờ 0.7 giây để game ổn định trước khi bắt đầu...")
+task.wait(0.7)
 
 --Hàm Nhận Event Daily
 game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("GetRewards"):InvokeServer()
@@ -1946,9 +1946,34 @@ latTab:AddToggle({
         Settings.eff = state
         SaveSettings() 
         if state then
-            for _, v in pairs(game.ReplicatedStorage.Chest:GetChildren()) do
-                if v.Name == "FruitEffect" or v.Name == "SwordEffect" then
-                    v:Destroy()
+            local chest = game:GetService("ReplicatedStorage"):FindFirstChild("Chest")
+            if chest then
+                -- Xóa FruitEffect (nếu là Folder thì xóa toàn bộ con bên trong)
+                local fruitEffect = chest:FindFirstChild("FruitEffect")
+                if fruitEffect then
+                    if fruitEffect:IsA("Folder") then
+                        for _, v in pairs(fruitEffect:GetChildren()) do
+                            v:Destroy()
+                        end
+                       
+                    else
+                        fruitEffect:Destroy()
+                        
+                    end
+                end
+                
+                -- Xóa SwordEffect
+                local swordEffect = chest:FindFirstChild("SwordEffect")
+                if swordEffect then
+                    if swordEffect:IsA("Folder") then
+                        for _, v in pairs(swordEffect:GetChildren()) do
+                            v:Destroy()
+                        end
+                        
+                    else
+                        swordEffect:Destroy()
+                        
+                    end
                 end
             end
         end
