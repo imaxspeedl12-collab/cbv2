@@ -509,7 +509,7 @@ end)
 
 local pe = game:GetService("Players").LocalPlayer.Name
 local Window = OrionLib:MakeWindow({
-    Name = "🌊 MLEM HUB | UPDATE 10", 
+    Name = "🌊 KING LEGACY | UPDATE 10", 
     IntroEnabled = false,
     IntroText = "Welcome to CHANBAOV3, "..pe.."!",
     IntroIcon = "rbxassetid://6031094686",
