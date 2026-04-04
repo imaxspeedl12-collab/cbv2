@@ -357,6 +357,9 @@ local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/imax
 print("⏳ Chờ 1.5 giây để game ổn định trước khi bắt đầu...")
 task.wait(1.5)
 
+--Hàm Lock Fps
+setfpscap(20)
+
 --Hàm Nhận Event Daily
 game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("GetRewards"):InvokeServer()
 
