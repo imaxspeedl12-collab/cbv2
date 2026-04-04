@@ -354,11 +354,12 @@ local serverName = currentServer and currentServer.Name or "Không xác định"
 local jobId = currentJobId
 
 local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/imaxspeedl12-collab/orionlib/refs/heads/main/orionlib", true))()
-print("⏳ Chờ 1.5 giây để game ổn định trước khi bắt đầu...")
-task.wait(1.5)
+print("⏳ Chờ 1 giây để game ổn định trước khi bắt đầu...")
+task.wait(1)
 
 --Hàm Lock Fps
-setfpscap(20)
+setfpscap(21)
+
 
 --Hàm Nhận Event Daily
 game:GetService("ReplicatedStorage"):WaitForChild("Chest"):WaitForChild("Remotes"):WaitForChild("Functions"):WaitForChild("GetRewards"):InvokeServer()
@@ -508,7 +509,7 @@ end)
 
 local pe = game:GetService("Players").LocalPlayer.Name
 local Window = OrionLib:MakeWindow({
-    Name = "🌊 CHANBAO | UPDATE 10", 
+    Name = "🌊 MLEM HUB | UPDATE 10", 
     IntroEnabled = false,
     IntroText = "Welcome to CHANBAOV3, "..pe.."!",
     IntroIcon = "rbxassetid://6031094686",
@@ -812,7 +813,7 @@ local sTab = Window:MakeTab({
     PremiumOnly = false
 })
 if servers then
-local Section = sTab:AddSection({Name = serverName})
+    sTab:AddLabel("👤 NAME: " .. name .. "   |   🌐 SERVER: " .. serverName)
 end
 
 local function getBossRoot()
@@ -2841,5 +2842,55 @@ httprequest({
     Headers = { ['Content-Type'] = 'application/json' },
     Body = payload
 })
+
+-- Xóa frame đỏ cũ nếu có
+local oldGui = game.CoreGui:FindFirstChild("FPSGui")
+if oldGui then oldGui:Destroy() end
+
+-- Tạo GUI mới
+local gui = Instance.new("ScreenGui")
+gui.Name = "FPSGui"
+gui.Parent = game.CoreGui
+
+-- Frame nền
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 100, 0, 40)
+frame.Position = UDim2.new(0.5, -50, 0.5, -20)
+frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+frame.BackgroundTransparency = 0.6
+frame.Parent = gui
+
+-- Bo góc
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 8)
+corner.Parent = frame
+
+-- Text FPS
+local text = Instance.new("TextLabel")
+text.Size = UDim2.new(1, 0, 1, 0)
+text.BackgroundTransparency = 1
+text.Text = "FPS: 0"
+text.TextColor3 = Color3.fromRGB(255, 255, 255)
+text.TextSize = 18
+text.Font = Enum.Font.GothamBold
+text.TextXAlignment = Enum.TextXAlignment.Center
+text.Parent = frame
+
+-- Tính FPS
+local fps = 0
+local runService = game:GetService("RunService")
+
+runService.RenderStepped:Connect(function()
+    fps = fps + 1
+end)
+
+-- Cập nhật mỗi giây
+spawn(function()
+    while task.wait(1) do
+        text.Text = "FPS: " .. fps
+        fps = 0
+    end
+end)
+
 
 OrionLib:Init()
